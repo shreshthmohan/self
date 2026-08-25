@@ -50,7 +50,11 @@ markdown, re-serialises it, and compares. It enhances only when the two are
 identical. Anything TipTap would rewrite keeps the textarea, so two authoring
 paths cannot damage one stored string.
 
-Press **Add a table, then re-enhance** to make the gate refuse. Set the gap to
+The gate compares the **rendered HTML** of the stored markdown against the
+rendered HTML of the round-trip, not the bytes. Byte equality refuses on a
+trailing newline and on table column padding, so it refuses nearly every entry.
+
+Press **Add raw HTML (trips the gate)** to make the gate refuse. Set the gap to
 **never** to see the no-JavaScript path.
 
 A refusal is not an error, so it offers three ways out:
@@ -61,3 +65,11 @@ A refusal is not an error, so it offers three ways out:
   to the rewrite. Consented loss, which is allowed. Silent loss is not.
 - **I fixed it — check again** — remove the offending markdown, then re-run
   the gate.
+
+## Headless checks
+
+```sh
+node vocab-check.mjs     # which constructs survive, per extension set
+node converge.mjs        # serialisation reaches a fixed point after one pass
+node gate-check.mjs      # byte equality against rendered-HTML equality
+```
