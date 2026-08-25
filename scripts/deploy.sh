@@ -16,20 +16,13 @@ set -eu
 branch="${WORKERS_CI_BRANCH:-}"
 echo "deploy: branch ${branch:-<unset>}"
 
-# Skip the migration step while no schema exists. wrangler's behaviour on an
-# empty migrations folder is not worth depending on. Remove this once the
-# first migration lands (#51) — by then the folder always has a file.
-has_migrations() {
-	ls migrations/*.sql >/dev/null 2>&1
-}
-
 case "$branch" in
 main)
-	if has_migrations; then pnpm exec wrangler d1 migrations apply self --env production --remote; fi
+	pnpm exec wrangler d1 migrations apply self --env production --remote
 	pnpm exec wrangler deploy
 	;;
 dev)
-	if has_migrations; then pnpm exec wrangler d1 migrations apply self-dev --env dev --remote; fi
+	pnpm exec wrangler d1 migrations apply self-dev --env dev --remote
 	pnpm exec wrangler deploy
 	;;
 *)
