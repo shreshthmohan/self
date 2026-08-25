@@ -42,4 +42,20 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Blocking**: GitHub's **native issue dependencies** — the canonical, UI-visible representation. Add an edge with `gh api --method POST repos/<owner>/<repo>/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`, where `<blocker-db-id>` is the blocker's numeric **database id** (`gh api repos/<owner>/<repo>/issues/<n> --jq .id`, _not_ the `#number` or `node_id`). GitHub reports `issue_dependencies_summary.blocked_by` (open blockers only — the live gate). Where dependencies aren't available, fall back to a `Blocked by: #<n>, #<n>` line at the top of the child body. A ticket is unblocked when every blocker is closed.
 - **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
 - **Claim**: `gh issue edit <n> --add-assignee @me` — the session's first write.
-- **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+- **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far. Link every asset; never paste one in. See **Assets and research findings** below.
+
+### Assets and research findings
+
+The wayfinder skill says an asset is "linked from the issue, not pasted in". This repo keeps its assets in git. Both rules apply together.
+
+**Where the file goes.** A research file goes to `docs/research/<name>.md`. An ADR goes to `docs/adr/<nnnn>-<slug>.md`. Both land on `main`.
+
+**How the file gets there.** Commit it on the `research/<name>` branch. Push the branch. Open a pull request to `main`.
+
+**When the branch may go.** The wayfinder skill calls the research branch "throwaway". It is throwaway only after its file merges to `main`. Do not delete a branch whose file is not merged. The ticket and the map name the file by path, so a deleted branch turns that pointer into a dangling reference.
+
+**What the comment holds.** A resolution comment holds the answer: the decision and the reasoning for it. The file holds the evidence: the method, the measured tables, and the source quotes. Do not put a research document in a comment. A resolution comment longer than a few thousand characters does the file's job, which is wrong.
+
+**How to cite it.** Write the path, in the resolution comment and in the map's Decisions-so-far: "Facts in `docs/research/<name>.md`". Do not cite a branch name or a commit id in place of the path. A branch is not a durable address.
+
+**Before you close a research ticket**, make sure its file is on `main` or in an open pull request.
