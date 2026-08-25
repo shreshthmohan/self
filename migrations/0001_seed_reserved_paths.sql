@@ -13,12 +13,15 @@
 -- somewhere else. See ADR 0006.
 --
 -- `login` and `logout` replaced `sign-in` and `sign-out` here, and `a` was
--- added, while this file had run on exactly one database and that database
--- held no entries. Wrangler records a migration by NAME, so this edit does not
--- re-run anywhere it already ran: `0002_update_reserved_words.sql` carries the
--- same change for those databases, and is a no-op against a database seeded by
--- this version. Editing an applied migration is otherwise wrong — the two
--- databases would build different lists and never say so.
+-- added, after this file had already run on production `self`. Wrangler
+-- records a migration by NAME and will not re-run an edited one, so `self` was
+-- dropped and both migrations replayed from clean. That was safe only because
+-- the database held no rows at all — no entry, no section, no user, no claimed
+-- path. Editing an applied migration is otherwise wrong: the live database and
+-- a fresh one build different lists, and nothing ever says so.
+--
+-- Do not repeat this once the database holds anything. A correction is then a
+-- new migration, and the reserved list simply carries a dead word.
 
 INSERT OR IGNORE INTO path (slug, target_type, target_id, redirect_to, created_at) VALUES
 	-- Index paths (#5, section 7).
