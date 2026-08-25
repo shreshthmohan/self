@@ -67,6 +67,10 @@ _Avoid_: State, stage, phase
 Who can read a record. Read, never written: a record is public if its public flag is set, shared if it has any access row, and private if it has none. Private is not a state the owner sets — it is the state of having shared with nobody.
 _Avoid_: Published, permission, privacy, access level
 
+**Role**:
+What a user is allowed to do, as against what a user is allowed to read. One of `owner` and `viewer`. There is one owner, who writes everything; a viewer only reads, and what a viewer reads is decided by visibility, not by role. A role is set by invitation, never by signing up.
+_Avoid_: Permission, admin, access level
+
 **Audience**:
 A named set of users a record is shared to — `family`, `climbing`. A record can also name a user directly; the two together decide who may read it.
 _Avoid_: Group, circle, list, team
