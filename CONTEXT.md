@@ -28,6 +28,26 @@ _Avoid_: Type, category, class
 The open second axis on an entry. Free-form and many per entry. Where a kind is one word from a fixed list, tags are any words the owner wants, and they carry the overlap a single kind cannot hold.
 _Avoid_: Label, keyword, topic
 
+**Decision**:
+An entry that records a *what* — a choice the owner made and no longer wants to re-argue. A decision is a kind, not a table: it holds prose and links, no fields of its own. Not to be confused with an ADR in `docs/adr/`, which records a decision about this code and is read next to it. Same word, two stores, on purpose.
+_Avoid_: Choice, call, ruling
+
+**Ethos**:
+An entry that records a *why* — a standing belief the owner holds, which decisions rest on. A kind, like a decision. An ethos has no lifecycle: it is rewritten, never closed.
+_Avoid_: Value, principle, belief
+
+**Task**:
+Something to do. **Not part of this domain.** A task carries live state that is read to be acted on and goes stale, which is the opposite of prose; it lives in Tusker. A task that bears on a decision is written as prose inside that decision.
+_Avoid_: Todo, action item
+
+**Link**:
+A directed relation from one entry to another. Many per entry in both directions. A link is a fact on its own, not text inside a body, so the reverse view can be rendered — standing on an ethos and seeing every decision it justifies.
+_Avoid_: Reference, connection, backlink
+
+**Relation**:
+The meaning a link carries, drawn from a fixed list: `justified-by` and `supersedes`. Each declares an inverse label, so one stored link reads both ways. A relation does not restrict which kinds sit at either end.
+_Avoid_: Link type, edge, predicate
+
 **Contact**:
 A person the CMS tracks. Has its own table, because filtering on people earns the columns.
 
