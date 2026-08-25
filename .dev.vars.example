@@ -1,0 +1,5 @@
+# Copy to `.dev.vars` and fill in. `.dev.vars` is ignored by git.
+# Generate the secret with: openssl rand -base64 32
+BETTER_AUTH_SECRET=""
+# Local sign-in prints the magic link to the console, so any placeholder works.
+RESEND_API_KEY="local-placeholder"
