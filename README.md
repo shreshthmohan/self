@@ -17,10 +17,10 @@ pnpm run dev
 
 The app reads no variable yet. This section is the setup for the ones the auth and email work will add. Nothing here belongs in a Workers Builds **build variable**: a build variable is read while the build runs, and every value below is read while a request runs.
 
-| Name | What it is | Where it comes from |
-| --- | --- | --- |
-| `BETTER_AUTH_SECRET` | Signs session tokens. Rotating it signs everybody out. | Generate one. |
-| `RESEND_API_KEY` | Sends the magic link. One key per environment. | The Resend dashboard. |
+| Name                 | What it is                                             | Where it comes from   |
+| -------------------- | ------------------------------------------------------ | --------------------- |
+| `BETTER_AUTH_SECRET` | Signs session tokens. Rotating it signs everybody out. | Generate one.         |
+| `RESEND_API_KEY`     | Sends the magic link. One key per environment.         | The Resend dashboard. |
 
 ### Generate the auth secret
 
@@ -77,12 +77,12 @@ cp .dev.vars.example .dev.vars
 
 Cloudflare Workers Builds deploys on a push. The dashboard settings are:
 
-| Setting | Value |
-| --- | --- |
-| Build command | `sh scripts/build.sh` |
-| Deploy command | `sh scripts/deploy.sh` |
-| Root directory | `/` |
-| Production branch | `main` |
+| Setting           | Value                  |
+| ----------------- | ---------------------- |
+| Build command     | `sh scripts/build.sh`  |
+| Deploy command    | `sh scripts/deploy.sh` |
+| Root directory    | `/`                    |
+| Production branch | `main`                 |
 
 Both commands are scripts, because the branch has to reach both steps.
 
@@ -92,11 +92,11 @@ Both commands are scripts, because the branch has to reach both steps.
 
 ## Domains
 
-| Environment | Worker | Domain |
-| --- | --- | --- |
-| production | `self` | `shreshth.dev` |
-| dev | `self-dev` | `dev.shreshth.dev` |
+| Environment | Worker     | Domain             |
+| ----------- | ---------- | ------------------ |
+| production  | `self`     | `shreshth.dev`     |
+| dev         | `self-dev` | `dev.shreshth.dev` |
 
 Both are custom domains in `wrangler.jsonc`. Wrangler writes the DNS record on the first deploy; neither name had a record before.
 
-Local development uses the top level of `wrangler.jsonc`, whose `database_id` is a placeholder on purpose. A build with no `CLOUDFLARE_ENV` therefore cannot reach a real database and claims no domain.
+Local development uses the top level of `wrangler.jsonc`, whose `database_id` is a placeholder on purpose. A build with no `CLOUDFLARE_ENV` therefore cannot reach a real database and claims no domain
