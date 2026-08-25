@@ -1,0 +1,48 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "self",
+	"main": "./workers/app.ts",
+	"compatibility_date": "2025-10-08",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+
+	// The default environment is production. `main` deploys it.
+	// See docs/adr/0006-migrations-run-in-the-deploy-command.md.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "self",
+			"database_id": "1436b004-d08b-4a03-ae79-1d5d3b5cb8f1",
+			"migrations_dir": "migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "IMAGES",
+			"bucket_name": "self-images"
+		}
+	],
+
+	"env": {
+		// `dev` deploys this environment. Same binding names, other resources.
+		"dev": {
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "self-dev",
+					"database_id": "b43d4917-9b87-4062-87e8-7b9b44655f42",
+					"migrations_dir": "migrations"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "IMAGES",
+					"bucket_name": "self-images-dev"
+				}
+			],
+			"observability": { "enabled": true },
+			"upload_source_maps": true
+		}
+	}
+}
