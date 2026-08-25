@@ -31,14 +31,14 @@ _Avoid_: Label, keyword, topic
 **Contact**:
 A person the CMS tracks. Has its own table, because filtering on people earns the columns.
 
-**Belonging**:
-A movable physical thing the owner has, wants, or once had. One belonging covers the whole life of one thing — the research before it, the years of use, the disposal after. Rejected candidates are prose, not belongings.
-_Avoid_: Item, asset, possession, purchase
+**Possession**:
+A movable physical thing the owner has, wants, or once had. One possession covers the whole life of one thing — the research before it, the years of use, the disposal after. Rejected candidates are prose, not possessions.
+_Avoid_: Item, asset, belonging, purchase
 
 **Property**:
-Immovable real estate the owner holds — a house, a farm, an office. Not a belonging: its facts are ledger-shaped, tracked per period, and a belonging has no equivalent.
+Immovable real estate the owner holds — a house, a farm, an office. Not a possession: its facts are ledger-shaped, tracked per period, and a possession has no equivalent.
 _Avoid_: Estate, land, premises, building
 
 **Status**:
-Where a belonging is in its life: `wanted`, `dropped`, `owned`, `sold`, `gone`. `dropped` means the owner decided against it. A status never leaves a record; it moves it out of the default view.
+Where a possession is in its life: `wanted`, `dropped`, `owned`, `sold`, `gone`. `dropped` means the owner decided against it. A status never leaves a record; it moves it out of the default view.
 _Avoid_: State, stage, phase
