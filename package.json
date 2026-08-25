@@ -17,6 +17,7 @@
 		"better-auth": "^1.7.1",
 		"drizzle-orm": "0.45.2",
 		"isbot": "5.1.32",
+		"marked": "^18.0.11",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
 		"react-router": "8.3.0"
