@@ -1,3 +1,14 @@
 .scratch/
 .DS_Store
 node_modules/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Cloudflare and build output
+.wrangler/
+build/
+dist/
+.react-router/
