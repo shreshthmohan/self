@@ -1,0 +1,24 @@
+{
+  "name": "prototype-editor-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prototype": "vite",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@tiptap/extension-image": "^3.30.3",
+    "@tiptap/markdown": "^3.30.3",
+    "@tiptap/react": "^3.30.3",
+    "@tiptap/starter-kit": "^3.30.3",
+    "@uiw/react-md-editor": "^4.1.2",
+    "marked": "^18.0.10",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^29.1.1",
+    "vite": "^7.3.6"
+  }
+}
