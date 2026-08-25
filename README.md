@@ -73,6 +73,29 @@ cp .dev.vars.example .dev.vars
 
 `.dev.vars` is ignored by git. Never commit it. Local sign-in prints the magic link to the console instead of sending mail, so `RESEND_API_KEY` can hold any placeholder there.
 
+## Schema and migrations
+
+One TypeScript file is the source: [`app/db/schema.ts`](app/db/schema.ts). Nothing writes to D1 except a migration wrangler applies.
+
+```sh
+pnpm run db:generate      # schema.ts -> a new file in migrations/
+pnpm run auth:generate    # Better Auth's five tables -> app/db/auth-schema.ts
+```
+
+`app/db/auth-schema.ts` is **generated, never hand-edited**. An upgrade is: regenerate, read the diff, `pnpm run db:generate`, commit. See [ADR 0010](docs/adr/0010-auth-tables-live-in-the-app-schema.md).
+
+Apply locally with wrangler:
+
+```sh
+pnpm exec wrangler d1 migrations apply self-dev --local
+```
+
+`dev` and `main` apply theirs from `scripts/deploy.sh`, so a failed migration stops the deploy. `d1 migrations apply` is the one command that reads `wrangler.jsonc` and honours `--env`.
+
+**Migrations are additive only.** A migration lands while the old worker is still serving, so no column is dropped or renamed in the deploy that stops using it. Split a destructive change across two deploys. Nothing enforces this — read every `db:generate` diff.
+
+Reach the database through `createDb()` in [`app/db/index.ts`](app/db/index.ts), never `drizzle()` directly. The wrapper hides `transaction()`, which D1 auto-commits straight through; `batch()` is the only transactional unit.
+
 ## Deploy
 
 Cloudflare Workers Builds deploys on a push. The dashboard settings are:
