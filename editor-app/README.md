@@ -52,3 +52,12 @@ paths cannot damage one stored string.
 
 Press **Add a table, then re-enhance** to make the gate refuse. Set the gap to
 **never** to see the no-JavaScript path.
+
+A refusal is not an error, so it offers three ways out:
+
+- **Keep editing as markdown** — the textarea is a real editor, and the entry
+  keeps everything TipTap cannot hold.
+- **Accept these changes and enhance** — the author reads the diff, then agrees
+  to the rewrite. Consented loss, which is allowed. Silent loss is not.
+- **I fixed it — check again** — remove the offending markdown, then re-run
+  the gate.

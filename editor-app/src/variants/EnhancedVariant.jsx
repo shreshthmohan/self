@@ -14,12 +14,14 @@ export function EnhancedVariant() {
   const [saved, setSaved] = useState(() => load(V))
   const [mode, setMode] = useState('plain') // plain | rich
   const [gate, setGate] = useState(null) // {ok, from, to}
+  const [dismissed, setDismissed] = useState(false)
   const [delay, setDelay] = useState(2000)
   const [tick, setTick] = useState(0)
 
   const host = useRef(null)
   const textarea = useRef(null)
   const editor = useRef(null)
+  const mount = useRef(null)
   const file = useRef(null)
 
   // The hydration gap, made visible. Until this fires the page is variant C:
@@ -59,22 +61,38 @@ export function EnhancedVariant() {
       // back unchanged. Otherwise the author keeps the textarea and keeps the
       // content.
       if (back !== source) {
+        mount.current = (md) => {
+          editor.current = new Editor({
+            element: host.current,
+            extensions: [
+              SK.default,
+              Img.default.configure({ allowBase64: true, inline: true }),
+              MD.Markdown.configure({ markedOptions: { gfm: true } }),
+            ],
+            content: md,
+            contentType: 'markdown',
+          })
+          setMode('rich')
+        }
         setGate({ ok: false, from: source, to: back })
         return
       }
       setGate({ ok: true })
 
-      editor.current = new Editor({
-        element: host.current,
-        extensions: [
-          SK.default,
-          Img.default.configure({ allowBase64: true, inline: true }),
-          MD.Markdown.configure({ markedOptions: { gfm: true } }),
-        ],
-        content: source,
-        contentType: 'markdown',
-      })
-      setMode('rich')
+      mount.current = (md) => {
+        editor.current = new Editor({
+          element: host.current,
+          extensions: [
+            SK.default,
+            Img.default.configure({ allowBase64: true, inline: true }),
+            MD.Markdown.configure({ markedOptions: { gfm: true } }),
+          ],
+          content: md,
+          contentType: 'markdown',
+        })
+        setMode('rich')
+      }
+      mount.current(source)
     }, delay)
 
     return () => {
@@ -120,7 +138,8 @@ export function EnhancedVariant() {
     <div>
       <div style={banner(mode, gate)}>
         {mode === 'plain' && !gate && `Not enhanced yet. Waiting ${delay} ms — this is the hydration gap, and the form works right now.`}
-        {mode === 'plain' && gate && !gate.ok && 'Enhancement refused. This entry uses markdown the rich editor would change, so it stays as markdown.'}
+        {mode === 'plain' && gate && !gate.ok && !dismissed && 'Enhancement refused. This entry uses markdown the rich editor would change, so it stays as markdown. Nothing is broken — pick a way out below.'}
+        {mode === 'plain' && dismissed && 'Editing as markdown, by your choice. The form posts the same way it always did.'}
         {mode === 'rich' && 'Enhanced. The rich editor gave the stored markdown back byte-for-byte, so it took over.'}
       </div>
 
@@ -203,7 +222,7 @@ export function EnhancedVariant() {
         <span style={{ color: '#666' }}>Body: {kb(value)}</span>
       </div>
 
-      {rows && (
+      {rows && !dismissed && (
         <section style={{ marginTop: 20 }}>
           <h3 style={{ margin: '0 0 8px' }}>Why the gate refused</h3>
           <pre style={pre}>
@@ -214,6 +233,34 @@ export function EnhancedVariant() {
               </div>
             ))}
           </pre>
+          <p style={{ fontSize: 13, color: '#555', margin: '10px 0 8px' }}>
+            Three ways out. Losing the lines is allowed — losing them without being asked is not.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" onClick={() => setDismissed(true)}>
+              Keep editing as markdown
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // Consented loss. The author has the diff in front of them.
+                setValue(gate.to)
+                setGate({ ok: true })
+                mount.current?.(gate.to)
+              }}
+            >
+              Accept these changes and enhance
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setGate(null)
+                setTick((n) => n + 1)
+              }}
+            >
+              I fixed it — check again
+            </button>
+          </div>
         </section>
       )}
 
