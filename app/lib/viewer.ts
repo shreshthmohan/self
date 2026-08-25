@@ -1,27 +1,47 @@
 import type { Role } from "../db/vocabulary";
+import { auth } from "./auth.server";
 
 /**
- * Who is asking. The seam a real sign-in fills.
+ * Who is asking. The seam a real sign-in fills, now filled.
  *
- * Better Auth is chosen, researched, and declared (ADR 0010), but no handler
- * serves it yet — that is #43. Until it does, this module is the ONLY place
- * that answers "who is this", so #43 replaces one function body and every
- * caller stays as it is.
+ * One Better Auth session read against D1 per request that carries a session
+ * cookie — no `cookieCache`, no `secondaryStorage`, so revocation is
+ * immediate. A request with no cookie never reaches the database. See ADR 0009.
  *
- * The rule while the seam is empty: the owner exists on `pnpm dev` and NOWHERE
- * else. `import.meta.env.DEV` is resolved at BUILD time, so a deployed bundle
- * carries the `null` branch and nothing more — a version preview URL runs with
- * production bindings (see scripts/build.sh), and an unguarded editor there
- * would write to the production database.
+ * The `import.meta.env.DEV` owner that stood here while the seam was empty is
+ * gone. Local signs in for real off the URL the Worker console prints, so
+ * there is one way to become the owner and production exercises it.
+ *
+ * This is async, and every caller awaits it. The stub could be synchronous; a
+ * session read cannot.
  */
 export type Viewer = { id: string; role: Role };
 
-const LOCAL_OWNER: Viewer = { id: "local-owner", role: "owner" };
+/**
+ * One read per REQUEST, not one per call. The root route reads the viewer to
+ * decide whether to show the logout control, and the route under it reads the
+ * same viewer to decide what the viewer may see; both loaders run against the
+ * same `Request`, so without this the page costs two session reads.
+ *
+ * A `WeakMap` and not a module variable: an isolate serves many requests, and
+ * a cache keyed on anything wider would hand one visitor another's session.
+ * ADR 0009's rule is untouched — a new request still reads D1.
+ */
+const perRequest = new WeakMap<Request, Promise<Viewer | null>>();
 
-export function getViewer(_request: Request): Viewer | null {
-	// #43 replaces this body with a Better Auth session read. Keep the
-	// signature: `request` carries the cookie a real session needs.
-	return import.meta.env.DEV ? LOCAL_OWNER : null;
+export function getViewer(request: Request): Promise<Viewer | null> {
+	const cached = perRequest.get(request);
+	if (cached) return cached;
+
+	const pending = readViewer(request);
+	perRequest.set(request, pending);
+	return pending;
+}
+
+async function readViewer(request: Request): Promise<Viewer | null> {
+	const session = await auth().api.getSession({ headers: request.headers });
+	if (!session) return null;
+	return { id: session.user.id, role: session.user.role as Role };
 }
 
 export function isOwner(viewer: Viewer | null): boolean {
@@ -41,8 +61,8 @@ export function notFound(): never {
 }
 
 /** Only the owner writes. Anyone else gets the same notice as a bad slug. */
-export function requireOwner(request: Request): Viewer {
-	const viewer = getViewer(request);
+export async function requireOwner(request: Request): Promise<Viewer> {
+	const viewer = await getViewer(request);
 	if (!isOwner(viewer)) notFound();
 	return viewer as Viewer;
 }

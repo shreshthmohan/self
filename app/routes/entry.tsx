@@ -18,7 +18,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	if (!target) notFound();
 	if (target.type === "redirect") throw redirect(`/${target.to}`, 301);
 
-	const viewer = getViewer(request);
+	const viewer = await getViewer(request);
 	const entry = await loadEntry(handle, target.id, viewer);
 	if (!entry) notFound();
 

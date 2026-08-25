@@ -72,8 +72,12 @@ Who can read a record. Read, never written: a record is public if its public fla
 _Avoid_: Published, permission, privacy, access level
 
 **Role**:
-What a user is allowed to do, as against what a user is allowed to read. One of `owner` and `viewer`. There is one owner, who writes everything; a viewer only reads, and what a viewer reads is decided by visibility, not by role. A role is set by invitation, never by signing up.
+What a user is allowed to do, as against what a user is allowed to read. One of `owner` and `viewer`. There is one owner, who writes everything; a viewer only reads, and what a viewer reads is decided by visibility, not by role. The owner role is set once, by the claim; every other role is set by invitation. No form ever sets a role.
 _Avoid_: Permission, admin, access level
+
+**Claim**:
+The one sign-in that makes a site its owner's. The first address to sign in takes the `owner` role, and registration closes behind it: every later unknown address is refused. A claim happens once in the life of a site, and it cannot be repeated or transferred.
+_Avoid_: Bootstrap, first run, setup, install
 
 **Audience**:
 A named set of users a record is shared to — `family`, `climbing`. A record can also name a user directly; the two together decide who may read it.

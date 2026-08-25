@@ -15,12 +15,15 @@ pnpm run dev
 
 ## Environment variables
 
-The app reads no variable yet. This section is the setup for the ones the auth and email work will add. Nothing here belongs in a Workers Builds **build variable**: a build variable is read while the build runs, and every value below is read while a request runs.
+Nothing here belongs in a Workers Builds **build variable**: a build variable is read while the build runs, and every value below is read while a request runs.
 
-| Name                 | What it is                                             | Where it comes from   |
-| -------------------- | ------------------------------------------------------ | --------------------- |
-| `BETTER_AUTH_SECRET` | Signs session tokens. Rotating it signs everybody out. | Generate one.         |
-| `RESEND_API_KEY`     | Sends the magic link. One key per environment.         | The Resend dashboard. |
+| Name                 | What it is                                             | Where it comes from            |
+| -------------------- | ------------------------------------------------------ | ------------------------------ |
+| `BETTER_AUTH_SECRET` | Signs session tokens. Rotating it signs everybody out. | Generate one. A secret.        |
+| `RESEND_API_KEY`     | Sends the magic link. One key per environment.         | The Resend dashboard. A secret.|
+| `BETTER_AUTH_URL`    | The one origin auth answers on.                        | `wrangler.jsonc`. A plain var. |
+
+`BETTER_AUTH_URL` is not a secret and is checked in, one value per environment. It is a written value and not an inferred one because a version preview URL is public and carries **production** bindings: an origin read off the request would make every preview a second front door to the production database. Auth 404s on any other origin. See [ADR 0012](docs/adr/0012-the-first-sign-in-claims-the-site.md).
 
 ### Generate the auth secret
 
@@ -72,6 +75,21 @@ cp .dev.vars.example .dev.vars
 ```
 
 `.dev.vars` is ignored by git. Never commit it. Local sign-in prints the magic link to the console instead of sending mail, so `RESEND_API_KEY` can hold any placeholder there.
+
+## Sign in
+
+The site has one owner, and **the first address to sign in claims it**. Registration closes behind that address: a later unknown address receives no mail and sees the same notice as a known one. See [ADR 0012](docs/adr/0012-the-first-sign-in-claims-the-site.md).
+
+The claim window opens when a bundle deploys to a database with no owner in it, and it closes on the first sign-in. Anybody who reaches `/api/auth/sign-in/magic-link` inside that window becomes the owner, so **deploy and then claim at once**, and read the table afterwards:
+
+```sh
+pnpm exec wrangler d1 execute self --remote \
+  --command "SELECT email, role FROM user"
+```
+
+`/login` is linked from nowhere. A magic link always lands on `/`, so no redirect parameter is carried and none has to be validated. Logging out is a POST, never a GET.
+
+Locally there is no mail: `pnpm run dev` prints the magic link to the Worker console and the URL is pasted into the browser. The claim works the same way there, against the local database.
 
 ## Schema and migrations
 
