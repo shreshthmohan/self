@@ -1,0 +1,249 @@
+import { useEffect, useRef, useState } from 'react'
+import { initial, load, save, wipe, SAMPLE_IMAGE, fileToDataUri, kb } from '../store'
+import { lineDiff, shorten } from '../diff'
+
+export const name = 'A over C — textarea first, TipTap enhances it'
+const V = 'D'
+
+// The vocabulary the gate has to accept. TipTap's StarterKit knows none of
+// tables or task items, so they load only if the extension is installed.
+const TABLE_SAMPLE = `\n\n| Part | Cost |\n| --- | --- |\n| Washer | 40p |\n`
+
+export function EnhancedVariant() {
+  const [value, setValue] = useState(() => initial(V))
+  const [saved, setSaved] = useState(() => load(V))
+  const [mode, setMode] = useState('plain') // plain | rich
+  const [gate, setGate] = useState(null) // {ok, from, to}
+  const [delay, setDelay] = useState(2000)
+  const [tick, setTick] = useState(0)
+
+  const host = useRef(null)
+  const textarea = useRef(null)
+  const editor = useRef(null)
+  const file = useRef(null)
+
+  // The hydration gap, made visible. Until this fires the page is variant C:
+  // a real form with a real textarea, usable with no editor JavaScript at all.
+  useEffect(() => {
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const [{ Editor }, SK, Img, MD] = await Promise.all([
+        import('@tiptap/core'),
+        import('@tiptap/starter-kit'),
+        import('@tiptap/extension-image'),
+        import('@tiptap/markdown'),
+      ])
+      if (cancelled) return
+
+      // Never steal a textarea the author is typing in.
+      if (document.activeElement === textarea.current) {
+        textarea.current.addEventListener('blur', () => setTick((t) => t + 1), { once: true })
+        return
+      }
+
+      const source = textarea.current ? textarea.current.value : value
+      const probe = new Editor({
+        element: document.createElement('div'),
+        extensions: [
+          SK.default,
+          Img.default.configure({ allowBase64: true, inline: true }),
+          MD.Markdown.configure({ markedOptions: { gfm: true } }),
+        ],
+        content: source,
+        contentType: 'markdown',
+      })
+      const back = probe.getMarkdown()
+      probe.destroy()
+
+      // THE GATE. Enhance only when the rich editor gives the stored markdown
+      // back unchanged. Otherwise the author keeps the textarea and keeps the
+      // content.
+      if (back !== source) {
+        setGate({ ok: false, from: source, to: back })
+        return
+      }
+      setGate({ ok: true })
+
+      editor.current = new Editor({
+        element: host.current,
+        extensions: [
+          SK.default,
+          Img.default.configure({ allowBase64: true, inline: true }),
+          MD.Markdown.configure({ markedOptions: { gfm: true } }),
+        ],
+        content: source,
+        contentType: 'markdown',
+      })
+      setMode('rich')
+    }, delay)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+      editor.current?.destroy()
+      editor.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delay, tick])
+
+  const current = () => (mode === 'rich' && editor.current ? editor.current.getMarkdown() : value)
+
+  const onSubmit = (e) => {
+    e.preventDefault()
+    // With JavaScript off the browser posts the textarea. With it on, the rich
+    // editor writes markdown back into that same field and the same route runs.
+    const md = current()
+    setValue(md)
+    save(V, md)
+    setSaved(md)
+  }
+
+  const insert = async (src) => {
+    if (mode === 'rich' && editor.current) {
+      editor.current.chain().focus().setImage({ src, alt: 'pasted image' }).run()
+    } else {
+      setValue((v) => `${v}\n\n![pasted image](${src})\n`)
+    }
+  }
+
+  const toPlain = () => {
+    const md = current()
+    editor.current?.destroy()
+    editor.current = null
+    setValue(md)
+    setMode('plain')
+  }
+
+  const rows = gate && !gate.ok ? lineDiff(gate.from, gate.to) : null
+
+  return (
+    <div>
+      <div style={banner(mode, gate)}>
+        {mode === 'plain' && !gate && `Not enhanced yet. Waiting ${delay} ms — this is the hydration gap, and the form works right now.`}
+        {mode === 'plain' && gate && !gate.ok && 'Enhancement refused. This entry uses markdown the rich editor would change, so it stays as markdown.'}
+        {mode === 'rich' && 'Enhanced. The rich editor gave the stored markdown back byte-for-byte, so it took over.'}
+      </div>
+
+      <form method="post" encType="multipart/form-data" onSubmit={onSubmit}>
+        <input
+          name="heading"
+          defaultValue="Why the kitchen tap leaks"
+          style={{ width: '100%', fontSize: 20, padding: 8, margin: '12px 0 8px' }}
+        />
+
+        {/* Always in the DOM and always named, so the no-JS post carries it. */}
+        <textarea
+          ref={textarea}
+          name="body"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          rows={14}
+          hidden={mode === 'rich'}
+          style={{ width: '100%', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13, padding: 10 }}
+        />
+        <div
+          ref={host}
+          style={{
+            display: mode === 'rich' ? 'block' : 'none',
+            border: '1px solid #ccc',
+            borderRadius: 6,
+            padding: 12,
+            minHeight: 260,
+          }}
+        />
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button type="submit">Save</button>
+          <button type="button" onClick={() => insert(SAMPLE_IMAGE)}>Insert sample image</button>
+          <button type="button" onClick={() => file.current.click()}>Upload an image…</button>
+          <input
+            ref={file}
+            type="file"
+            name="image"
+            accept="image/*"
+            hidden
+            onChange={async (e) => e.target.files?.[0] && insert(await fileToDataUri(e.target.files[0]))}
+          />
+          {mode === 'rich' && (
+            <button type="button" onClick={toPlain}>Edit as markdown</button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              wipe(V)
+              setSaved(null)
+            }}
+          >
+            Wipe store
+          </button>
+        </div>
+      </form>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
+        <label>
+          Hydration gap:&nbsp;
+          <select value={delay} onChange={(e) => setDelay(Number(e.target.value))}>
+            <option value={0}>instant</option>
+            <option value={2000}>2 s</option>
+            <option value={8000}>8 s — a bad connection</option>
+            <option value={9999999}>never — JavaScript off</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => {
+            toPlain()
+            setValue((v) => v + TABLE_SAMPLE)
+            setGate(null)
+            setTick((t) => t + 1)
+          }}
+        >
+          Add a table, then re-enhance
+        </button>
+        <span style={{ color: '#666' }}>Body: {kb(value)}</span>
+      </div>
+
+      {rows && (
+        <section style={{ marginTop: 20 }}>
+          <h3 style={{ margin: '0 0 8px' }}>Why the gate refused</h3>
+          <pre style={pre}>
+            {rows.map((r, i) => (
+              <div key={i} style={{ background: { same: 'transparent', gone: '#4a1c1c', new: '#14361c' }[r.kind] }}>
+                {{ same: '  ', gone: '- ', new: '+ ' }[r.kind]}
+                {shorten(r.text)}
+              </div>
+            ))}
+          </pre>
+        </section>
+      )}
+
+      <section style={{ marginTop: 20 }}>
+        <h3 style={{ margin: '0 0 8px' }}>Saved markdown</h3>
+        <pre style={pre}>{saved == null ? 'Nothing saved yet.' : shorten(saved, 100000)}</pre>
+      </section>
+    </div>
+  )
+}
+
+const pre = {
+  fontFamily: 'ui-monospace, Menlo, monospace',
+  fontSize: 12,
+  lineHeight: 1.5,
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+  background: '#0f1115',
+  color: '#d6dae1',
+  padding: 12,
+  borderRadius: 6,
+  maxHeight: 300,
+  overflow: 'auto',
+  margin: 0,
+}
+
+const banner = (mode, gate) => ({
+  padding: '8px 12px',
+  borderRadius: 6,
+  fontSize: 13,
+  background: mode === 'rich' ? '#e4f5e9' : gate && !gate.ok ? '#fde8e8' : '#eef2f7',
+  color: '#222',
+})

@@ -53,3 +53,31 @@ export function wipe(variant) {
 export function initial(variant) {
   return load(variant) ?? SEED
 }
+
+/**
+ * A raw photo as a data URI is megabytes of text. That is a prototype artifact
+ * — real images go to R2 as a short URL — and it swamps any variant that keeps
+ * the markdown in a textarea. Downscale so the variants are judged fairly.
+ */
+export function fileToDataUri(file, maxEdge = 800) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = reject
+    reader.onload = () => {
+      const img = new window.Image()
+      img.onerror = reject
+      img.onload = () => {
+        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
+      }
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+export const kb = (s) => `${(new Blob([s]).size / 1024).toFixed(1)} kB`

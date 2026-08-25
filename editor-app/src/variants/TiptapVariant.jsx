@@ -3,7 +3,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import { Markdown } from '@tiptap/markdown'
-import { initial, load, save, wipe, SAMPLE_IMAGE } from '../store'
+import { initial, load, save, wipe, SAMPLE_IMAGE, fileToDataUri } from '../store'
 import { RoundTripPanel } from '../RoundTripPanel'
 
 export const name = 'TipTap 3 — WYSIWYG, markdown generated on save'
@@ -46,12 +46,10 @@ export function TiptapVariant() {
 
   const insert = (src) => editor.chain().focus().setImage({ src, alt: 'pasted image' }).run()
 
-  const onFile = (e) => {
+  const onFile = async (e) => {
     const f = e.target.files?.[0]
     if (!f) return
-    const r = new FileReader()
-    r.onload = () => insert(String(r.result))
-    r.readAsDataURL(f)
+    insert(await fileToDataUri(f))
   }
 
   return (

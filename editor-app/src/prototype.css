@@ -1,0 +1,22 @@
+:root { -webkit-text-size-adjust: 100%; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+/* Fix reported on variant A: an uploaded image rendered at natural size and
+   spilled out of the editor box. */
+.ProseMirror img,
+.wmde-markdown img,
+.preview img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+.ProseMirror { outline: none; min-height: 220px; }
+.ProseMirror table { border-collapse: collapse; }
+.ProseMirror td, .ProseMirror th { border: 1px solid #ccc; padding: 4px 8px; }
+
+/* A phone puts the switcher over the keyboard otherwise. */
+@media (max-width: 640px) {
+  input, textarea, .ProseMirror { font-size: 16px; } /* stop iOS zoom on focus */
+}

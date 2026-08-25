@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prototype": "vite",
+    "prototype": "vite --host",
     "dev": "vite"
   },
   "dependencies": {

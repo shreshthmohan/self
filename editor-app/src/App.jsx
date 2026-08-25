@@ -5,11 +5,13 @@ import { PrototypeSwitcher } from './PrototypeSwitcher'
 import { TiptapVariant, name as nameA } from './variants/TiptapVariant'
 import { MdEditorVariant, name as nameB } from './variants/MdEditorVariant'
 import { BareTextareaVariant, name as nameC } from './variants/BareTextareaVariant'
+import { EnhancedVariant, name as nameD } from './variants/EnhancedVariant'
 
 const VARIANTS = [
   { key: 'A', name: nameA, Component: TiptapVariant },
   { key: 'B', name: nameB, Component: MdEditorVariant },
   { key: 'C', name: nameC, Component: BareTextareaVariant },
+  { key: 'D', name: nameD, Component: EnhancedVariant },
 ]
 
 function readVariant() {

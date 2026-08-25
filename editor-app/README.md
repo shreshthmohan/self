@@ -10,7 +10,8 @@ npm install
 npm run prototype
 ```
 
-Then open `http://localhost:5180/?variant=A`. The bottom bar switches variants;
+Then open `http://localhost:5180/?variant=A`. `vite --host` also prints a LAN
+URL, so a phone on the same network can open the same page. The bottom bar switches variants;
 the left and right arrow keys do the same when the cursor is not in the editor.
 
 | Variant | What it is |
@@ -18,6 +19,7 @@ the left and right arrow keys do the same when the cursor is not in the editor.
 | A | TipTap 3, WYSIWYG, markdown generated on save |
 | B | `@uiw/react-md-editor`, a textarea with a toolbar and a preview |
 | C | A bare textarea, the no-JavaScript floor |
+| D | A over C — the textarea is the form, TipTap enhances it behind a fidelity gate |
 
 ## What to look at
 
@@ -39,3 +41,14 @@ node roundtrip-check.mjs        # TipTap parse -> serialise, and a second pass
 
 Bundle sizes came from one build per variant, `vite.measure-*.config.js`, each
 measured against a bare React 19 build.
+
+## The gate, variant D
+
+D renders variant C: a real form with a named textarea, which posts with no
+JavaScript. After the chosen hydration gap it loads TipTap, parses the stored
+markdown, re-serialises it, and compares. It enhances only when the two are
+identical. Anything TipTap would rewrite keeps the textarea, so two authoring
+paths cannot damage one stored string.
+
+Press **Add a table, then re-enhance** to make the gate refuse. Set the gap to
+**never** to see the no-JavaScript path.

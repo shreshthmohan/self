@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import MDEditor from '@uiw/react-md-editor'
-import { initial, load, save, wipe, SAMPLE_IMAGE } from '../store'
+import { initial, load, save, wipe, SAMPLE_IMAGE, fileToDataUri } from '../store'
 import { RoundTripPanel } from '../RoundTripPanel'
 
 export const name = 'Markdown textarea + @uiw/react-md-editor toolbar'
@@ -19,12 +19,10 @@ export function MdEditorVariant() {
 
   const insert = (src) => setValue((v) => `${v}\n\n![pasted image](${src})\n`)
 
-  const onFile = (e) => {
+  const onFile = async (e) => {
     const f = e.target.files?.[0]
     if (!f) return
-    const r = new FileReader()
-    r.onload = () => insert(String(r.result))
-    r.readAsDataURL(f)
+    insert(await fileToDataUri(f))
   }
 
   return (
