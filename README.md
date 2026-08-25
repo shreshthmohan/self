@@ -122,4 +122,4 @@ Both commands are scripts, because the branch has to reach both steps.
 
 Both are custom domains in `wrangler.jsonc`. Wrangler writes the DNS record on the first deploy; neither name had a record before.
 
-Local development uses the top level of `wrangler.jsonc`, whose `database_id` is a placeholder on purpose. A build with no `CLOUDFLARE_ENV` therefore cannot reach a real database and claims no domain..
+Local development uses the top level of `wrangler.jsonc`, whose `database_id` is a placeholder on purpose. A build with no `CLOUDFLARE_ENV` therefore cannot reach a real database and claims no domain.
