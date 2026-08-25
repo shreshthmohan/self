@@ -1,0 +1,32 @@
+{
+	"name": "self",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "react-router build",
+		"deploy": "wrangler deploy",
+		"dev": "react-router dev",
+		"preview": "npm run build && vite preview",
+		"typegen": "wrangler types && react-router typegen",
+		"typecheck": "npm run typegen && tsc -b"
+	},
+	"dependencies": {
+		"isbot": "5.1.32",
+		"react": "^19.2.7",
+		"react-dom": "^19.2.7",
+		"react-router": "8.3.0"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "1.52.1",
+		"@react-router/dev": "8.3.0",
+		"@tailwindcss/vite": "4.1.17",
+		"@types/node": "24.10.1",
+		"@types/react": "19.2.7",
+		"@types/react-dom": "19.2.3",
+		"tailwindcss": "4.1.17",
+		"typescript": "5.9.3",
+		"vite": "7.3.6",
+		"vite-tsconfig-paths": "5.1.4",
+		"wrangler": "4.123.0"
+	}
+}
