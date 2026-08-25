@@ -9,15 +9,23 @@
 # exits 0, so the miss is silent.
 set -eu
 
-echo "branch: ${WORKERS_CI_BRANCH:-<unset>}"
+branch="${WORKERS_CI_BRANCH:-}"
+echo "branch: ${branch:-<unset>}"
 
-case "${WORKERS_CI_BRANCH:-}" in
+# Skip the migration step while no schema exists. wrangler's behaviour on an
+# empty migrations folder is not worth depending on. Remove this once the
+# first migration lands (#51) — by then the folder always has a file.
+has_migrations() {
+	ls migrations/*.sql >/dev/null 2>&1
+}
+
+case "$branch" in
 main)
-	npx wrangler d1 migrations apply self --remote
+	if has_migrations; then npx wrangler d1 migrations apply self --remote; fi
 	npx wrangler deploy
 	;;
 dev)
-	npx wrangler d1 migrations apply self-dev --remote --env dev
+	if has_migrations; then npx wrangler d1 migrations apply self-dev --remote --env dev; fi
 	npx wrangler deploy --env dev
 	;;
 *)
