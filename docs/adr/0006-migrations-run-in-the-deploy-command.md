@@ -46,6 +46,8 @@ Nothing enforces this in code. A grep guard for `DROP COLUMN` and `RENAME` was r
 
 **`dev` is a wrangler environment, not a second Workers project.** One repository connection, one script, one dashboard surface; only the bindings differ. `dev` is the branch because CLAUDE.md already names it the base for worktrees.
 
-**The ambient credential is assumed, not verified.** Cloudflare publishes no scope for the deploy step's wrangler credential. The first migrated deploy to `main` proves it. If it fails, the fix is one `CLOUDFLARE_API_TOKEN` build secret, scoped Workers Scripts:Edit and D1:Edit.
+**The ambient credential is verified.** It was assumed when this record was written, because Cloudflare publishes no scope for the deploy step's wrangler credential. The first migrated deploy to `main` proved it: the Workers Builds run of 2026-08-25 17:12 UTC applied `0000_initial_schema` and `0001_seed_reserved_paths` to D1 `self` and deployed the Worker. No `CLOUDFLARE_API_TOKEN` build secret is needed.
+
+**Preview builds must be switched on, or the table above is dead code.** Cloudflare's production branch is `main`, and Workers Builds ships with non-production branch builds **off**. With that setting off, a push to any other branch runs nothing at all — so the `any other` row never fires, and neither does the `dev` row, because `dev` is a non-production branch too. The setting is now on. Verified on branch `deploy-guard`: the build uploaded a version, added no deployment, and left `self-dev` unmigrated.
 
 Set in [How migrations run on Cloudflare Workers Builds](https://github.com/shreshthmohan/self/issues/23).
