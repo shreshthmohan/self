@@ -79,9 +79,24 @@ Cloudflare Workers Builds deploys on a push. The dashboard settings are:
 
 | Setting | Value |
 | --- | --- |
-| Build command | `pnpm run build` |
+| Build command | `sh scripts/build.sh` |
 | Deploy command | `sh scripts/deploy.sh` |
 | Root directory | `/` |
 | Production branch | `main` |
 
-`scripts/deploy.sh` branches on the pushed branch: `main` migrates D1 `self` and deploys; `dev` migrates `self-dev` and deploys `--env dev`; every other branch uploads a preview version and migrates nothing. See [ADR 0006](docs/adr/0006-migrations-run-in-the-deploy-command.md).
+Both commands are scripts, because the branch has to reach both steps.
+
+`scripts/build.sh` maps the pushed branch to `CLOUDFLARE_ENV`: `dev` builds the `dev` environment, everything else builds `production`. This matters more than it looks. The React Router build flattens **one** wrangler environment into `build/server/wrangler.json`, so the environment is fixed at build time and `wrangler deploy --env dev` selects nothing.
+
+`scripts/deploy.sh` then migrates and deploys what the build produced: `main` migrates D1 `self` and deploys; `dev` migrates `self-dev` and deploys; every other branch uploads a preview version and migrates nothing. See [ADR 0006](docs/adr/0006-migrations-run-in-the-deploy-command.md).
+
+## Domains
+
+| Environment | Worker | Domain |
+| --- | --- | --- |
+| production | `self` | `shreshth.dev` |
+| dev | `self-dev` | `dev.shreshth.dev` |
+
+Both are custom domains in `wrangler.jsonc`. Wrangler writes the DNS record on the first deploy; neither name had a record before.
+
+Local development uses the top level of `wrangler.jsonc`, whose `database_id` is a placeholder on purpose. A build with no `CLOUDFLARE_ENV` therefore cannot reach a real database and claims no domain.

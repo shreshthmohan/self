@@ -1,3 +1,35 @@
+/**
+ * Wrangler configuration.
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ *
+ * ── Environments ────────────────────────────────────────────────────────────
+ * Top level        → LOCAL development (`pnpm dev`). Local SQLite and R2, no
+ *                    Cloudflare login. `database_id` is a placeholder ON
+ *                    PURPOSE, so a stray bare `wrangler deploy` cannot reach a
+ *                    real database.
+ * `env.dev`        → worker `self-dev` at dev.shreshth.dev, D1 `self-dev`.
+ * `env.production` → worker `self` at shreshth.dev, D1 `self`.
+ *
+ * ── How a deploy picks an environment ───────────────────────────────────────
+ * The React Router build flattens ONE environment into
+ * `build/server/wrangler.json`, and `wrangler deploy` deploys that. The
+ * environment is chosen at BUILD time by `CLOUDFLARE_ENV` — NOT by
+ * `wrangler deploy --env`. Passing `--env` to the deploy reads a config that
+ * no longer has environments, so it silently deploys the wrong one.
+ *
+ * `scripts/build.sh` maps the pushed branch to `CLOUDFLARE_ENV`, and
+ * `scripts/deploy.sh` deploys what it built. See
+ * docs/adr/0006-migrations-run-in-the-deploy-command.md.
+ *
+ * D1 commands are the exception: `d1 migrations apply` reads THIS file and
+ * does honour `--env`.
+ *
+ * ⚠️ Wrangler does NOT inherit `vars`, `d1_databases`, or `r2_buckets` into a
+ * named environment. Every block repeats them in full.
+ *
+ * ⚠️ Runtime SECRETS are not here. Set them per worker with `wrangler secret
+ * put` (see the README); `.dev.vars` holds them for local development.
+ */
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "self",
@@ -7,26 +39,28 @@
 	"observability": { "enabled": true },
 	"upload_source_maps": true,
 
-	// The default environment is production. `main` deploys it.
-	// See docs/adr/0006-migrations-run-in-the-deploy-command.md.
+	// ── Top level = LOCAL DEV. Bindings are local; the id is a placeholder.
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "self",
-			"database_id": "1436b004-d08b-4a03-ae79-1d5d3b5cb8f1",
+			"database_name": "self-dev",
+			"database_id": "PLACEHOLDER_LOCAL_ONLY_use_CLOUDFLARE_ENV_for_remote",
 			"migrations_dir": "migrations"
 		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "IMAGES",
-			"bucket_name": "self-images"
+			"bucket_name": "self-images-dev"
 		}
 	],
 
 	"env": {
-		// `dev` deploys this environment. Same binding names, other resources.
+		// ── Deployed DEV: worker `self-dev` at dev.shreshth.dev ──────────────
 		"dev": {
+			"name": "self-dev",
+			// Custom domain. Wrangler writes the DNS record on deploy.
+			"routes": [{ "pattern": "dev.shreshth.dev", "custom_domain": true }],
 			"d1_databases": [
 				{
 					"binding": "DB",
@@ -39,6 +73,28 @@
 				{
 					"binding": "IMAGES",
 					"bucket_name": "self-images-dev"
+				}
+			],
+			"observability": { "enabled": true },
+			"upload_source_maps": true
+		},
+
+		// ── PRODUCTION: worker `self` at shreshth.dev ────────────────────────
+		"production": {
+			"name": "self",
+			"routes": [{ "pattern": "shreshth.dev", "custom_domain": true }],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "self",
+					"database_id": "1436b004-d08b-4a03-ae79-1d5d3b5cb8f1",
+					"migrations_dir": "migrations"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "IMAGES",
+					"bucket_name": "self-images"
 				}
 			],
 			"observability": { "enabled": true },
