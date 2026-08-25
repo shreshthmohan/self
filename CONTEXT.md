@@ -31,14 +31,34 @@ _Avoid_: Label, keyword, topic
 **Contact**:
 A person the CMS tracks. Has its own table, because filtering on people earns the columns.
 
-**Belonging**:
-A movable physical thing the owner has, wants, or once had. One belonging covers the whole life of one thing — the research before it, the years of use, the disposal after. Rejected candidates are prose, not belongings.
-_Avoid_: Item, asset, possession, purchase
+**Possession**:
+A movable physical thing the owner has, wants, or once had. One possession covers the whole life of one thing — the research before it, the years of use, the disposal after. Rejected candidates are prose, not possessions.
+_Avoid_: Item, asset, belonging, purchase
 
 **Property**:
-Immovable real estate the owner holds — a house, a farm, an office. Not a belonging: its facts are ledger-shaped, tracked per period, and a belonging has no equivalent.
+Immovable real estate the owner holds — a house, a farm, an office. Not a possession: its facts are ledger-shaped, tracked per period, and a possession has no equivalent.
 _Avoid_: Estate, land, premises, building
 
 **Status**:
-Where a belonging is in its life: `wanted`, `dropped`, `owned`, `sold`, `gone`. `dropped` means the owner decided against it. A status never leaves a record; it moves it out of the default view.
+Where a possession is in its life: `wanted`, `dropped`, `owned`, `sold`, `gone`. `dropped` means the owner decided against it. A status never leaves a record; it moves it out of the default view.
 _Avoid_: State, stage, phase
+
+**Visibility**:
+Who can read a record. Read, never written: a record is public if its public flag is set, shared if it has any access row, and private if it has none. Private is not a state the owner sets — it is the state of having shared with nobody.
+_Avoid_: Published, permission, privacy, access level
+
+**Audience**:
+A named set of users a record is shared to — `family`, `climbing`. A record can also name a user directly; the two together decide who may read it.
+_Avoid_: Group, circle, list, team
+
+**Level**:
+What a section, or a possession's money column, does to its record's visibility. One of `inherit`, `shared`, `private`. A level can only narrow: the record's visibility is the ceiling.
+_Avoid_: Scope, mode, override
+
+**Path**:
+A root URL, and the row that owns it. One registry holds every path, so entries, possessions, and properties share one namespace and a collision fails loudly. A path is generated from the record's name, editable, and outlives a rename as a redirect unless the owner frees it.
+_Avoid_: Route, permalink, URL, vanity slug
+
+**Notice**:
+The one generic page an unpermitted reader gets — no title, no kind, no date, an invitation to sign in. Returned for a shared record read by a stranger, for a record shared with nobody, and for a slug that does not exist, so it tells a guesser nothing.
+_Avoid_: Error page, 403, paywall
