@@ -17,4 +17,10 @@ export const auth = createAuth({
 	baseURL: "http://localhost:5173",
 	secret: "generate-only-never-used",
 	sendMagicLink: async () => {},
+
+	// The two gates on the owner claim. They read the database, which this CLI
+	// does not have, and they decide nothing about the TABLE SHAPE the CLI is
+	// here to read — so they are stubs, like the database above.
+	isRegistrationClosed: async () => false,
+	isKnownAddress: async () => false,
 });

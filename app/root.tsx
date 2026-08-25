@@ -9,6 +9,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { getViewer } from "./lib/viewer";
 
 export const links: Route.LinksFunction = () => [
 	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -47,8 +48,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	);
 }
 
-export default function App() {
-	return <Outlet />;
+/**
+ * Whether to draw the logout control. One session read per request, shared
+ * with the route below through the memo in `getViewer` — see app/lib/viewer.ts.
+ */
+export async function loader({ request }: Route.LoaderArgs) {
+	return { signedIn: (await getViewer(request)) !== null };
+}
+
+export default function App({ loaderData }: Route.ComponentProps) {
+	return (
+		<>
+			{loaderData.signedIn && (
+				<div className="mb-6 flex justify-end text-sm">
+					{/* A real form, so it posts with JavaScript off. Signing out is
+					    a POST and nothing else: a GET would let any page end the
+					    session with an <img> tag. */}
+					<form method="post" action="/logout">
+						<button type="submit" className="underline">
+							Log out
+						</button>
+					</form>
+				</div>
+			)}
+			<Outlet />
+		</>
+	);
 }
 
 // Renders on the server, so it reads with JavaScript off.

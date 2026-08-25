@@ -17,7 +17,28 @@ import { auth } from "./auth.server";
  */
 export type Viewer = { id: string; role: Role };
 
-export async function getViewer(request: Request): Promise<Viewer | null> {
+/**
+ * One read per REQUEST, not one per call. The root route reads the viewer to
+ * decide whether to show the logout control, and the route under it reads the
+ * same viewer to decide what the viewer may see; both loaders run against the
+ * same `Request`, so without this the page costs two session reads.
+ *
+ * A `WeakMap` and not a module variable: an isolate serves many requests, and
+ * a cache keyed on anything wider would hand one visitor another's session.
+ * ADR 0009's rule is untouched — a new request still reads D1.
+ */
+const perRequest = new WeakMap<Request, Promise<Viewer | null>>();
+
+export function getViewer(request: Request): Promise<Viewer | null> {
+	const cached = perRequest.get(request);
+	if (cached) return cached;
+
+	const pending = readViewer(request);
+	perRequest.set(request, pending);
+	return pending;
+}
+
+async function readViewer(request: Request): Promise<Viewer | null> {
 	const session = await auth().api.getSession({ headers: request.headers });
 	if (!session) return null;
 	return { id: session.user.id, role: session.user.role as Role };

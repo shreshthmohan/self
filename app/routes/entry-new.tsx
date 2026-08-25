@@ -21,7 +21,7 @@ const EMPTY: EntryInput = {
 };
 
 export async function loader({ request }: Route.LoaderArgs) {
-	requireOwner(request);
+	await requireOwner(request);
 	return { value: EMPTY };
 }
 
@@ -36,7 +36,7 @@ export async function loader({ request }: Route.LoaderArgs) {
  * See ADR 0011.
  */
 export async function action({ request }: Route.ActionArgs) {
-	requireOwner(request);
+	await requireOwner(request);
 	const { intent, input } = parseEntryForm(await request.formData());
 
 	if (intent.kind !== "save") return { value: input, problems: [] };

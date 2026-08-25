@@ -40,6 +40,14 @@
 	"upload_source_maps": true,
 
 	// ── Top level = LOCAL DEV. Bindings are local; the id is a placeholder.
+	//
+	// `BETTER_AUTH_URL` is the ONE origin auth answers on. It is a var and not
+	// an inferred value on purpose: a version preview URL is public and carries
+	// PRODUCTION bindings, so an inferred origin would make every preview a
+	// second front door to the production database. See ADR 0012.
+	"vars": {
+		"BETTER_AUTH_URL": "http://localhost:5173"
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -61,6 +69,13 @@
 			"name": "self-dev",
 			// Custom domain. Wrangler writes the DNS record on deploy.
 			"routes": [{ "pattern": "dev.shreshth.dev", "custom_domain": true }],
+			// No `self-dev.<subdomain>.workers.dev`. Auth answers on the custom
+			// domain alone, so a workers.dev URL would serve a site that cannot
+			// sign anybody in.
+			"workers_dev": false,
+			"vars": {
+				"BETTER_AUTH_URL": "https://dev.shreshth.dev"
+			},
 			"d1_databases": [
 				{
 					"binding": "DB",
@@ -83,6 +98,10 @@
 		"production": {
 			"name": "self",
 			"routes": [{ "pattern": "shreshth.dev", "custom_domain": true }],
+			"workers_dev": false,
+			"vars": {
+				"BETTER_AUTH_URL": "https://shreshth.dev"
+			},
 			"d1_databases": [
 				{
 					"binding": "DB",

@@ -19,7 +19,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {
-	const viewer = requireOwner(request);
+	const viewer = await requireOwner(request);
 	const id = Number(params.id);
 	if (!Number.isInteger(id)) notFound();
 
@@ -46,7 +46,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
  * enhances a working save rather than making one.
  */
 export async function action({ params, request }: Route.ActionArgs) {
-	requireOwner(request);
+	await requireOwner(request);
 	const id = Number(params.id);
 	if (!Number.isInteger(id)) notFound();
 

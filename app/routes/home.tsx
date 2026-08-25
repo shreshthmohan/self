@@ -22,7 +22,7 @@ export function meta({}: Route.MetaArgs) {
  * name.
  */
 export async function loader({ request }: Route.LoaderArgs) {
-	const viewer = getViewer(request);
+	const viewer = await getViewer(request);
 	const url = new URL(request.url);
 	const raw = url.searchParams.get("kind");
 	// An unrecognised kind filters nothing rather than 404s: a stale bookmark
