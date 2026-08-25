@@ -10,11 +10,23 @@ Sequencing follows: the script fails closed, so a failed migration exits non-zer
 
 A custom deploy command **replaces** the non-production default (`npx wrangler versions upload`), so the branch logic has to live in the script:
 
-| Branch | Database | Deploy |
-| --- | --- | --- |
-| `main` | `self` | `wrangler deploy` |
-| `dev` | `self-dev` | `wrangler deploy --env dev` |
-| any other | none | `wrangler versions upload` |
+| Branch | `CLOUDFLARE_ENV` | Database | Deploy |
+| --- | --- | --- | --- |
+| `main` | `production` | `self` | `wrangler deploy` |
+| `dev` | `dev` | `self-dev` | `wrangler deploy` |
+| any other | `production` | none | `wrangler versions upload` |
+
+## The environment is chosen at build time, not deploy time
+
+This ADR first wrote the `dev` deploy as `wrangler deploy --env dev`. That is wrong, and it fails silently.
+
+The React Router build flattens **one** wrangler environment into `build/server/wrangler.json`, and `wrangler deploy` deploys that file. The flattened file has no `env` block left, so `--env dev` on the deploy selects nothing and the deploy ships whatever the build resolved — production's bindings, production's worker name, and production's custom domain. Nothing errors.
+
+So the branch has to reach the **build** command as well. `scripts/build.sh` maps the branch to `CLOUDFLARE_ENV`, and `scripts/deploy.sh` deploys what it built and passes no `--env`. Two scripts, one branch variable, read twice.
+
+`d1 migrations apply` is the exception. It reads `wrangler.jsonc` directly rather than the build output, so it does honour `--env`, and the deploy script passes it.
+
+Two guards follow from this, both in `wrangler.jsonc`. The top level is **local development only** and its `database_id` is a placeholder, so a build with no `CLOUDFLARE_ENV` cannot reach a real database and declares no route. And each named environment sets its own `name` — `self` and `self-dev` — so a misrouted deploy lands on a different worker instead of overwriting the live one.
 
 `WORKERS_CI_BRANCH` is injected by Workers Builds and carries the branch name. `--remote` is mandatory on every `migrations apply`: without it the command writes a **local** file and exits 0, so the miss is silent.
 
