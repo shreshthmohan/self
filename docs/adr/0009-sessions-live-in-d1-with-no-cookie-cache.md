@@ -33,6 +33,8 @@ So the store that revokes immediately is also the one with no cookie-size ceilin
 
 **Rate limiting in the database.** The default `storage: "memory"` is per-isolate on Workers and resets constantly, so the limit is decorative — and the magic-link endpoint is unauthenticated and *sends email*, so an unlimited one burns the Resend quota and risks the sending domain. `storage: "database"` adds a fifth table through the migration route ADR 0006 already set. Its increments are not atomic, because D1 auto-commits, so a count can undershoot under concurrency; at this volume that does not matter. A Cloudflare WAF rule on the sign-in path is worth adding later as a second layer, not instead — it does not apply locally or on `dev`.
 
+**What this section does not say, and ADR 0013 does.** Better Auth's limiter keys on IP and path ALONE — no setting reaches an email address — and its default `x-forwarded-for` header does not resolve behind Cloudflare, so until ADR 0013 every requester shared one bucket and the limit configured here bound nobody. The store chosen above is unaffected and still correct. The WAF rule suggested above is still worth having, and still cannot key on an address: reading a request body needs Enterprise.
+
 ## Consequences
 
 **The auth schema is five tables, not four.** [Better Auth adapter: built-in D1 dialect or minimal plus Drizzle](https://github.com/shreshthmohan/self/issues/24) held schema generation until this decision, because setting `secondaryStorage` deletes `session` and `verification` from the generated schema — a fact found in the source, which the prose docs do not state. It is unset, so both stay, and `rateLimit` joins them: `user`, `session`, `account`, `verification`, `rateLimit`. Generation is now unblocked.
