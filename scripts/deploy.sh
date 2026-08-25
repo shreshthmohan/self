@@ -21,16 +21,16 @@ has_migrations() {
 
 case "$branch" in
 main)
-	if has_migrations; then npx wrangler d1 migrations apply self --remote; fi
-	npx wrangler deploy
+	if has_migrations; then pnpm exec wrangler d1 migrations apply self --remote; fi
+	pnpm exec wrangler deploy
 	;;
 dev)
-	if has_migrations; then npx wrangler d1 migrations apply self-dev --remote --env dev; fi
-	npx wrangler deploy --env dev
+	if has_migrations; then pnpm exec wrangler d1 migrations apply self-dev --remote --env dev; fi
+	pnpm exec wrangler deploy --env dev
 	;;
 *)
 	# Every other branch previews against production's schema and migrates
 	# nothing. A branch that needs a new column 500s until it merges.
-	npx wrangler versions upload
+	pnpm exec wrangler versions upload
 	;;
 esac
