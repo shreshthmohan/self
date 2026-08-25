@@ -63,6 +63,10 @@ _Avoid_: Estate, land, premises, building
 Where a possession is in its life: `wanted`, `dropped`, `owned`, `sold`, `gone`. `dropped` means the owner decided against it. A status never leaves a record; it moves it out of the default view.
 _Avoid_: State, stage, phase
 
+**Local draft**:
+Unsaved typing the editor keeps in one browser. It never reaches the database, it belongs to the tab that made it, and a save clears it. Not an unpublished entry — an entry nobody can read is private, which is a matter of visibility, not of being a draft.
+_Avoid_: Draft, autosave, working copy
+
 **Visibility**:
 Who can read a record. Read, never written: a record is public if its public flag is set, shared if it has any access row, and private if it has none. Private is not a state the owner sets — it is the state of having shared with nobody.
 _Avoid_: Published, permission, privacy, access level
