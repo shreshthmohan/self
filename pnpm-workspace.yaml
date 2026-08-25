@@ -3,3 +3,11 @@
 onlyBuiltDependencies:
   - esbuild
   - workerd
+
+# TS2742. `app/lib/auth.ts` builds under `composite: true`, so TypeScript must
+# emit a declaration for `createAuth`, and Better Auth's inferred return type
+# reaches into its own transitive dependencies. tsc resolves a pnpm symlink to
+# its real path under `.pnpm/`, which no import can name, so the emit fails.
+# `publicHoistPattern` does not fix it — the symlink is still what tsc follows.
+# A flat `node_modules` of real directories does.
+nodeLinker: hoisted
