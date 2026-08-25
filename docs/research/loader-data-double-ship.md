@@ -11,6 +11,7 @@ Date: 2026-08-25. Version under test: `react-router` 8.3.0, `@react-router/dev` 
 3. Four levers change this. Each one removes the entry text from the rendered HTML, not from the serialized data. `clientLoader.hydrate` with a `HydrateFallback` sends the text once, as data, and the server renders the fallback. A `clientLoader` with no server `loader` sends the text zero times and needs a second request. `<Await>` sends the text twice and adds bytes. A read-back of the text from the DOM sends the text once, but the build rejects the only server-only source for it.
 4. After compression the second copy is nearly free, except with gzip on a long entry. At 151,154 characters, brotli quality 11 costs 1,105 extra bytes for the doubling (2.0 percent) and zstd level 3 costs 1,101 (1.7 percent). Gzip costs 59,762 (96 percent), because the deflate window is 32 KiB and the two copies sit further apart than that.
 5. Cloudflare picks the algorithm by plan: Zstandard on Free, Brotli on Pro and Business, Gzip on Enterprise.
+6. **Point 4 holds only for local `zlib`. A real edge response costs much more.** Section 5 measures a deployed Worker: the doubling costs 24.9 percent on the encoding a browser gets, not 2 percent. Cloudflare compresses the response as a stream at a lower setting, so it does not keep a back-reference from the second copy to the first. Read section 5 before you use the section 3 table.
 
 ## Method
 
@@ -180,6 +181,58 @@ Total raw bytes of the JavaScript files the document references, at the 12,031-c
 
 Every lever except the DOM read-back sits within 350 bytes of the baseline. The DOM read-back carries the entry text in the bundle, which is why it is 218 KiB larger.
 
+## 5. The same doubling on a deployed Worker
+
+Sections 3 and 4 compress the document with Node `zlib` on the test machine. That is not what a reader gets. This section deploys the skeleton and reads real responses over the edge. It was added for issue #22.
+
+### Method
+
+1. Start from `cloudflare/templates/react-router-starter-template` and raise it to React Router 8.3.0. Four edits are needed; see issue #22 for the list.
+2. Add two routes that render **the same HTML**. `/big` gets the entry text from a `loader`, so the text ships twice. `/big-single` holds the text in the component and has no `loader`, so the text ships once. Both render 284 paragraphs.
+3. The entry text is the same 151,154-character span of *Moby-Dick* that section 3 uses.
+4. `wrangler deploy` to `workers.dev`. Then request each route with `curl`, once per `Accept-Encoding` value, and read `content-encoding` and the byte count off the response.
+5. The account is on the Free plan. `workers.dev` is not a zone, so no zone compression rule applies.
+
+### What the edge served
+
+`content-encoding` on a real response, by the `Accept-Encoding` the client sent:
+
+| `Accept-Encoding` sent | `content-encoding` served |
+| --- | --- |
+| `gzip, deflate, br, zstd` (Chrome) | `zstd` |
+| `gzip, deflate, br` (Safari) | `br` |
+| `gzip, deflate` | `gzip` |
+| `gzip` | `gzip` |
+| `identity` | none |
+
+Zstandard on Free, as the Speed docs say. Cloudflare never served gzip to a client that offered anything better, so the 96 percent gzip cliff in section 3 does not fire by default. It fires only for a client that offers neither Brotli nor Zstandard.
+
+### What the doubling costs over the edge
+
+Bytes of the document, as `curl` counted them.
+
+| `Accept-Encoding` | Served | `/big` (2 copies) | `/big-single` (1 copy) | Extra | Cost |
+| --- | --- | --- | --- | --- | --- |
+| `gzip, deflate, br, zstd` | `zstd` | 82,427 | 66,010 | +16,417 | **+24.9%** |
+| `zstd` | `zstd` | 83,149 | 66,010 | +17,139 | +26.0% |
+| `gzip, deflate, br` (Safari) | `br` | 88,295 | 65,269 | +23,026 | +35.3% |
+| `br` | `br` | 87,983 | 65,269 | +22,714 | +34.8% |
+| `gzip` | `gzip` | 128,519 | 65,209 | +63,310 | +97.1% |
+| `identity` | none | 316,702 | 158,500 | +158,202 | +99.8% |
+
+### Why this differs from section 3
+
+Section 3 measured brotli quality 11 and zstd level 3 over a whole buffer in memory. Both keep a window larger than the document, so the compressor found the first copy and pointed the second at it. The extra cost was 1,105 bytes, 2.0 percent.
+
+The edge does not do that. Cloudflare compresses the response as it streams, at a lower quality and a smaller effective window, so the second copy is largely compressed from scratch. The measured cost is 16,417 bytes, 24.9 percent — about 15 times the local figure.
+
+**Use the edge numbers.** A local `zlib` run understates what the doubling costs a reader.
+
+### What is still unmeasured
+
+- A custom domain. `workers.dev` carries no zone, so zone-level Brotli and Compression Rules were not in play. The site will run on a zone.
+- Any plan above Free. Brotli, the Pro and Business default, costs 34.8 percent here — worse than Zstandard, not better.
+
 ## Sources
 
 - `react-router` 8.3.0 source in `node_modules/react-router/dist/development/`: `lib/server-runtime/server.js` (lines 250-300, `serverHandoffStream`), `lib/server-runtime/single-fetch.js` (`encodeViaTurboStream`), `lib/dom/ssr/single-fetch.js` (`StreamTransfer`, the `didRenderScripts` gate, the `enqueue` script), `lib/dom/ssr/components.js` (line 491, `renderMeta.didRenderScripts = true`), `vendor/turbo-stream-v2/`.
@@ -191,4 +244,5 @@ Every lever except the DOM read-back sits within 350 bytes of the baseline. The 
 - RFC 1951, DEFLATE, 32 KiB window. RFC 7932, Brotli, window sizes and `lgwin`.
 - Entry text: Project Gutenberg ebook 2701, *Moby-Dick*, https://www.gutenberg.org/files/2701/2701-0.txt
 - Local build of `cloudflare/templates/react-router-starter-template`, raised to React Router 8.3.0, with seven route variants. Documents measured with Node 22.19.0 `zlib`.
+- Deployed probe for section 5: `self-v8-probe.forsakenlegacy.workers.dev`, React Router 8.3.0, `@cloudflare/vite-plugin` 1.52.1, `wrangler` 4.123.0, Vite 7.3.6, React 19.2.8, Node 22.19.0, Free plan.
 - Prior research in this repo: `docs/research/rrv8-hydration.md`, section 2, which first recorded the double ship on a two-field loader.
