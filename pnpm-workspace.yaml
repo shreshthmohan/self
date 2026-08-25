@@ -1,0 +1,5 @@
+# pnpm 10 blocks postinstall scripts by default. These three need theirs:
+# workerd and esbuild fetch a platform binary, sharp builds one.
+onlyBuiltDependencies:
+  - esbuild
+  - workerd
