@@ -13,7 +13,8 @@
 		{
 			"binding": "DB",
 			"database_name": "self",
-			"database_id": "1436b004-d08b-4a03-ae79-1d5d3b5cb8f1"
+			"database_id": "1436b004-d08b-4a03-ae79-1d5d3b5cb8f1",
+			"migrations_dir": "migrations"
 		}
 	],
 	"r2_buckets": [
@@ -30,7 +31,8 @@
 				{
 					"binding": "DB",
 					"database_name": "self-dev",
-					"database_id": "b43d4917-9b87-4062-87e8-7b9b44655f42"
+					"database_id": "b43d4917-9b87-4062-87e8-7b9b44655f42",
+					"migrations_dir": "migrations"
 				}
 			],
 			"r2_buckets": [
