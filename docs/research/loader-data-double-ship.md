@@ -11,6 +11,8 @@ Date: 2026-08-25. Version under test: `react-router` 8.3.0, `@react-router/dev` 
 3. Four levers change this. Each one removes the entry text from the rendered HTML, not from the serialized data. `clientLoader.hydrate` with a `HydrateFallback` sends the text once, as data, and the server renders the fallback. A `clientLoader` with no server `loader` sends the text zero times and needs a second request. `<Await>` sends the text twice and adds bytes. A read-back of the text from the DOM sends the text once, but the build rejects the only server-only source for it.
 4. After compression the second copy is nearly free, except with gzip on a long entry. At 151,154 characters, brotli quality 11 costs 1,105 extra bytes for the doubling (2.0 percent) and zstd level 3 costs 1,101 (1.7 percent). Gzip costs 59,762 (96 percent), because the deflate window is 32 KiB and the two copies sit further apart than that.
 5. Cloudflare picks the algorithm by plan: Zstandard on Free, Brotli on Pro and Business, Gzip on Enterprise.
+6. Point 4 measures a local `zlib` run and understates the edge at every length. Over the edge the second copy costs 374 bytes at 3,383 characters and 18,479 at 151,154. See sections 5 and 6.
+7. The longest post the old site ever published is 6,471 characters. At that length the second copy costs 678 bytes, against about 100 KB gzip of client JavaScript on the same page.
 6. **Point 4 holds only for local `zlib`. A real edge response costs much more.** Section 5 measures a deployed Worker: the doubling costs 24.9 percent on the encoding a browser gets, not 2 percent. Cloudflare compresses the response as a stream at a lower setting, so it does not keep a back-reference from the second copy to the first. Read section 5 before you use the section 3 table.
 
 ## Method
@@ -233,6 +235,53 @@ The edge does not do that. Cloudflare compresses the response as it streams, at 
 - A custom domain. `workers.dev` carries no zone, so zone-level Brotli and Compression Rules were not in play. The site will run on a zone.
 - Any plan above Free. Brotli, the Pro and Business default, costs 34.8 percent here — worse than Zstandard, not better.
 
+## 6. The same doubling at real entry lengths
+
+Section 5 measured one length, 151,154 characters. That is 23 times the longest post the old site ever published. This section measures the edge at the lengths this site actually writes. It was added for issue #35.
+
+### How long is a real entry?
+
+All 47 published posts in the old GitHub Issues CMS (`shreshthmohan/next-blog`, label `status:published`), by body length in characters:
+
+| Statistic | Characters |
+| --- | ---: |
+| Longest ("Dark mode that just works") | 6,471 |
+| Second longest | 4,596 |
+| Median | about 450 |
+| Posts above 12,000 | 0 |
+
+### Method
+
+A plain Worker, not the React Router skeleton. It streams a document of the same shape: a head, one `<article>` of 532-character paragraphs, then either a `<script>` that enqueues the entry text a second time as escaped JSON, or nothing. Two routes per length, `/<len>` and `/<len>/single`. The response is a `ReadableStream`, so Cloudflare compresses it as a stream, which is what made section 5 differ from section 3.
+
+Each length gets a different span of *Moby-Dick*, so no span is reused. `wrangler deploy` to `workers.dev`, Free plan, no zone. Each route requested with `curl` once per `Accept-Encoding`.
+
+The 151,154 row is a **control**: it must agree with section 5, which used the real React Router build.
+
+### What the doubling costs, by length
+
+Extra bytes of the two-copy document over the one-copy document.
+
+| Entry chars | zstd | | br | | gzip | |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 3,383 | +374 | +17.2% | +328 | +15.6% | +344 | +16.2% |
+| 6,471 | +678 | +18.0% | +575 | +15.8% | +646 | +17.6% |
+| 12,031 | +1,276 | +20.2% | +1,020 | +16.4% | +1,157 | +18.6% |
+| 48,315 | +5,134 | +23.3% | +5,311 | +24.4% | +20,115 | +93.2% |
+| 151,154 | +18,479 | +28.6% | +25,314 | +39.3% | +62,474 | +97.8% |
+
+The control agrees: 28.6 percent here against 24.9 percent in section 5. This probe carries less markup than the real build, so its denominator is smaller and its percentage runs a little high.
+
+### Three facts
+
+**Section 3 is wrong at every length, not only the long one.** Local `zlib` measured the doubling at 3,383 characters as *negative*, minus 70 bytes under brotli. The edge charges plus 328. A whole-buffer compressor at quality 11 finds the first copy and points the second at it. The streaming compressor at the edge does not.
+
+**The percentage is nearly flat. The bytes are not.** From 3,383 to 151,154 characters the ratio moves 17 to 29 percent, while the cost moves 374 bytes to 18,479, a factor of 49. So the ratio does not rank entries by what they cost. Bytes do.
+
+**At a real entry length the cost is under 1 KB.** The longest post ever published costs 678 bytes. The same page loads about 100 KB gzip of client JavaScript (section 4). Hydration's price is the bundle, larger by 150 times.
+
+**The gzip cliff needs 32 KiB of separation.** It does not fire at 12,031 characters, 18.6 percent, and it needs a client that offers neither Brotli nor Zstandard, which section 5 shows no browser does.
+
 ## Sources
 
 - `react-router` 8.3.0 source in `node_modules/react-router/dist/development/`: `lib/server-runtime/server.js` (lines 250-300, `serverHandoffStream`), `lib/server-runtime/single-fetch.js` (`encodeViaTurboStream`), `lib/dom/ssr/single-fetch.js` (`StreamTransfer`, the `didRenderScripts` gate, the `enqueue` script), `lib/dom/ssr/components.js` (line 491, `renderMeta.didRenderScripts = true`), `vendor/turbo-stream-v2/`.
@@ -244,5 +293,7 @@ The edge does not do that. Cloudflare compresses the response as it streams, at 
 - RFC 1951, DEFLATE, 32 KiB window. RFC 7932, Brotli, window sizes and `lgwin`.
 - Entry text: Project Gutenberg ebook 2701, *Moby-Dick*, https://www.gutenberg.org/files/2701/2701-0.txt
 - Local build of `cloudflare/templates/react-router-starter-template`, raised to React Router 8.3.0, with seven route variants. Documents measured with Node 22.19.0 `zlib`.
+- Deployed probe for section 6: `self-doubleship-probe.forsakenlegacy.workers.dev`, a plain Worker, `wrangler` 4.125.0, `compatibility_date` 2025-10-08, Free plan. Deleted after measurement.
+- Post lengths: `gh issue list --repo shreshthmohan/next-blog --label status:published --state all`, read 2026-08-25.
 - Deployed probe for section 5: `self-v8-probe.forsakenlegacy.workers.dev`, React Router 8.3.0, `@cloudflare/vite-plugin` 1.52.1, `wrangler` 4.123.0, Vite 7.3.6, React 19.2.8, Node 22.19.0, Free plan.
 - Prior research in this repo: `docs/research/rrv8-hydration.md`, section 2, which first recorded the double ship on a two-field loader.
