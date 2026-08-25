@@ -32,6 +32,13 @@ export function createAuth(options: {
 
 	/** Whether a `user` row already holds this address. */
 	isKnownAddress: (email: string) => Promise<boolean>;
+
+	/**
+	 * Spends one of this address's magic-link sends for the hour, and says
+	 * whether there was one to spend. The per-address limit is the real bound on
+	 * the form — see the note in `sendMagicLink` below and ADR 0013.
+	 */
+	consumeAddressAllowance: (email: string) => Promise<boolean>;
 }) {
 	return betterAuth({
 		database: drizzleAdapter(options.db, {
@@ -58,6 +65,25 @@ export function createAuth(options: {
 
 		// Memory rate limiting is per-isolate on Workers, so it is decorative.
 		rateLimit: { enabled: true, storage: "database" },
+
+		advanced: {
+			ipAddress: {
+				/**
+				 * Cloudflare APPENDS the client IP to any `X-Forwarded-For` the
+				 * client sent, so the default header arrives with two hops. With no
+				 * `trustedProxies`, better-auth refuses a multi-hop chain and keys
+				 * every requester into one shared `no-trusted-ip` bucket — which a
+				 * client can force deliberately by sending the header.
+				 *
+				 * Cloudflare OVERWRITES `cf-connecting-ip` on every proxied request,
+				 * so it is single-valued and cannot be spoofed at the edge, and it
+				 * needs no published IP range list kept current. `wrangler dev` sends
+				 * no such header and better-auth falls back to `127.0.0.1` there.
+				 * See ADR 0013.
+				 */
+				ipAddressHeaders: ["cf-connecting-ip"],
+			},
+		},
 
 		user: {
 			additionalFields: {
@@ -101,6 +127,24 @@ export function createAuth(options: {
 				// 300 s can die before a phone mail client fetches the URL.
 				expiresIn: 60 * 15,
 
+				/**
+				 * The per-IP layer, tightened from the plugin default of 5 per 60 s.
+				 * Three in a minute is past any human retry pattern. It is not an
+				 * hour: a household or an office behind one address would lock each
+				 * other out over a limit the per-address counter already enforces
+				 * correctly. See ADR 0013.
+				 *
+				 * This layer guards a DIRECT hit on `/api/auth/sign-in/magic-link`
+				 * and nothing else. `/login`'s action calls `api.signInMagicLink`
+				 * in process, so it never reaches the handler this rule sits on.
+				 * That divergence is accepted: the asset is mail, and the
+				 * per-address counter below bounds mail on BOTH paths. Routing the
+				 * form through the handler would cost the distinct mail-failure
+				 * page ADR 0008 requires, to tighten the layer ADR 0013 calls
+				 * secondary.
+				 */
+				rateLimit: { window: 60, max: 3 },
+
 				// A leaked `verification` row cannot be redeemed. D1 Time Travel
 				// and every backup hold that table.
 				storeToken: "hashed",
@@ -115,6 +159,14 @@ export function createAuth(options: {
 				 * notice, no existence oracle. See ADR 0003.
 				 */
 				sendMagicLink: async ({ email, url }) => {
+					// The real bound: 5 sends per address per hour. It runs BEFORE the
+					// address gate, so it counts every address typed, known or not —
+					// which is what makes cycling addresses expensive rather than free.
+					// It cannot be configured: better-auth builds its key from the IP
+					// and the path alone, and no option reaches the address. See ADR
+					// 0013.
+					if (!(await options.consumeAddressAllowance(email))) return;
+
 					const known = await options.isKnownAddress(email);
 					if (!known && (await options.isRegistrationClosed())) return;
 					await options.sendMagicLink({ email, url });

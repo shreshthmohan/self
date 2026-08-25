@@ -23,4 +23,9 @@ export const auth = createAuth({
 	// here to read — so they are stubs, like the database above.
 	isRegistrationClosed: async () => false,
 	isKnownAddress: async () => false,
+
+	// The per-address rate-limit counter (ADR 0013). It reads and writes
+	// `rate_limit`, a table better-auth already declares, so it adds no shape of
+	// its own for the CLI to read — another stub.
+	consumeAddressAllowance: async () => true,
 });
