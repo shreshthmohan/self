@@ -32,4 +32,13 @@ _Avoid_: Label, keyword, topic
 A person the CMS tracks. Has its own table, because filtering on people earns the columns.
 
 **Belonging**:
-A physical thing the owner possesses. Has its own table, for the same reason.
+A movable physical thing the owner has, wants, or once had. One belonging covers the whole life of one thing — the research before it, the years of use, the disposal after. Rejected candidates are prose, not belongings.
+_Avoid_: Item, asset, possession, purchase
+
+**Property**:
+Immovable real estate the owner holds — a house, a farm, an office. Not a belonging: its facts are ledger-shaped, tracked per period, and a belonging has no equivalent.
+_Avoid_: Estate, land, premises, building
+
+**Status**:
+Where a belonging is in its life: `wanted`, `dropped`, `owned`, `sold`, `gone`. `dropped` means the owner decided against it. A status never leaves a record; it moves it out of the default view.
+_Avoid_: State, stage, phase
