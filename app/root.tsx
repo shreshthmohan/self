@@ -28,6 +28,9 @@ export const links: Route.LinksFunction = () => [
 		rel: "stylesheet",
 		href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&display=swap",
 	},
+	{ rel: "icon", href: "/favicon.ico", sizes: "32x32" },
+	{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+	{ rel: "manifest", href: "/site.webmanifest" },
 ];
 
 /**
@@ -41,6 +44,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
+				{/* stone-50 and stone-950: the two --color-bg values in app.css. */}
+				<meta
+					name="theme-color"
+					media="(prefers-color-scheme: light)"
+					content="#fafaf9"
+				/>
+				<meta
+					name="theme-color"
+					media="(prefers-color-scheme: dark)"
+					content="#0c0a09"
+				/>
 				<Meta />
 				<Links />
 			</head>
