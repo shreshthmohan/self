@@ -25,12 +25,8 @@ export const links: Route.LinksFunction = () => [
 		href:
 			"https://fonts.googleapis.com/css2" +
 			"?family=Fraunces:opsz,wght@9..144,400..700" +
-			"&family=JetBrains+Mono:wght@400..700" +
+			// PROTOTYPE (#71): Karla rides along only for the ?body=karla A/B.
 			"&family=Karla:ital,wght@0,400..700;1,400..700" +
-			"&family=Public+Sans:ital,wght@0,400..700;1,400..700" +
-			"&family=Figtree:ital,wght@0,400..700;1,400..700" +
-			"&family=Instrument+Sans:ital,wght@0,400..600;1,400..600" +
-			"&family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700" +
 			"&display=swap",
 	},
 ];

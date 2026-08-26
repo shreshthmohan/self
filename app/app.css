@@ -1,23 +1,37 @@
 @import "tailwindcss" source(".");
 
-/* PROTOTYPE (#71) — proposed token set. Colours are tusker's names kept
-   verbatim so the two apps share one vocabulary. Fonts use Tailwind's three
-   built-in slots, so no new utility names are invented. */
+/* PROTOTYPE (#71) — the proposed token set.
+ *
+ * Greys are Tailwind's STONE scale. Stone was nearest to every one of
+ * tusker's fourteen greys, light and dark, measured in CIE Lab against the
+ * real v4 palette: no other family won a single row. The cost is warmth —
+ * tusker's surfaces are cream, stone's are near-neutral. Switch
+ * ?palette=tusker on the prototype to see what is given up.
+ *
+ * The accent is NOT a Tailwind colour. It is the family's yellow, kept.
+ *
+ * Fonts use Tailwind's three built-in slots, so the chrome invents no new
+ * utility names. Only the headings load a webfont.
+ */
 @theme {
 	--font-serif: "Fraunces", ui-serif, Georgia, serif;
-	--font-sans: "Karla", ui-sans-serif, system-ui, sans-serif;
+	--font-sans:
+		system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+		"Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 	--font-mono:
-		"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+		ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+		"Liberation Mono", monospace;
 
 	--color-accent: #ffc93f;
 	--color-accent-ink: #1a1400;
-	--color-bg: #fdfdfa;
-	--color-surface: #f6f4ea;
-	--color-surface-2: #f0eddd;
-	--color-border: #e7e3d2;
-	--color-fg: #141411;
-	--color-muted: #5a584f;
-	--color-dim: #9b978a;
+
+	--color-bg: var(--color-stone-50);
+	--color-surface: var(--color-stone-100);
+	--color-surface-2: var(--color-stone-200);
+	--color-border: var(--color-stone-300);
+	--color-fg: var(--color-stone-900);
+	--color-muted: var(--color-stone-600);
+	--color-dim: var(--color-stone-400);
 }
 
 :root {
@@ -26,6 +40,48 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
+		--color-bg: var(--color-stone-950);
+		--color-surface: var(--color-stone-900);
+		--color-surface-2: var(--color-stone-800);
+		--color-border: var(--color-stone-700);
+		--color-fg: var(--color-stone-100);
+		--color-muted: var(--color-stone-400);
+		--color-dim: var(--color-stone-500);
+	}
+}
+
+/* ------------------------------------------------- PROTOTYPE ONLY, below */
+
+/* The A/B axes. Two traps hit while building this, both worth remembering:
+   font-family is INHERITED rather than recomputed, so a switch must
+   re-declare it on the element carrying the variant; and a custom property
+   computes with its var() references ALREADY substituted, on the element
+   that declares it, so an indirection on :root inherits down resolved and an
+   override below does nothing. The real app has one face and one palette,
+   so it needs none of this. */
+
+[data-body] {
+	font-family: var(--font-sans);
+}
+
+[data-body="karla"] {
+	--font-sans: "Karla", ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-palette="tusker"] {
+	--color-bg: #fdfdfa;
+	--color-surface: #f6f4ea;
+	--color-surface-2: #f0eddd;
+	--color-border: #e7e3d2;
+	--color-fg: #141411;
+	--color-muted: #5a584f;
+	--color-dim: #9b978a;
+	background: var(--color-bg);
+	color: var(--color-fg);
+}
+
+@media (prefers-color-scheme: dark) {
+	[data-palette="tusker"] {
 		--color-bg: #16150f;
 		--color-surface: #1f1e16;
 		--color-surface-2: #272518;
@@ -36,26 +92,7 @@
 	}
 }
 
-/* PROTOTYPE ONLY — the variant switch.
-   Two traps, both hit while building this:
-   1. font-family is INHERITED, not recomputed, so the switch has to
-      re-declare it on the element that carries the variant.
-   2. A custom property computes with its var() references ALREADY
-      substituted, on the element that declares it. An indirection like
-      `--font-sans: var(--font-body), ...` on :root therefore inherits
-      down resolved, and overriding --font-body below changes nothing.
-      Each variant redeclares --font-sans itself.
-   The real app has ONE body face, so it needs neither rule. */
-[data-body] {
-	font-family: var(--font-sans);
-}
-
-[data-body="karla"] { --font-sans: "Karla", ui-sans-serif, system-ui, sans-serif; }
-[data-body="public"] { --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif; }
-[data-body="figtree"] { --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif; }
-[data-body="instrument"] { --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif; }
-[data-body="inter"] { --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif; }
-[data-body="mono"] { --font-sans: var(--font-mono); }
+/* ------------------------------------------------------------------ base */
 
 html,
 body {
@@ -63,7 +100,10 @@ body {
 	color: var(--color-fg);
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
 	font-family: var(--font-serif);
 	font-weight: 500;
 	letter-spacing: -0.01em;
@@ -79,37 +119,6 @@ h1, h2, h3, h4 {
 	outline: 2px solid var(--color-accent);
 	outline-offset: 3px;
 	border-radius: 3px;
-}
-
-/* codeuncode's animated backdrop, on trial. */
-[data-bg="sunshine"] {
-	position: relative;
-	isolation: isolate;
-}
-[data-bg="sunshine"]::before {
-	content: "";
-	position: fixed;
-	inset: 0 0 50% 0;
-	z-index: -1;
-	pointer-events: none;
-	background:
-		radial-gradient(60% 80% at 15% 20%, rgba(255, 201, 63, 0.18), transparent 60%),
-		radial-gradient(50% 70% at 85% 10%, rgba(255, 201, 63, 0.1), transparent 65%),
-		radial-gradient(40% 60% at 50% 60%, rgba(255, 201, 63, 0.08), transparent 70%);
-	background-size: 200% 200%;
-	background-repeat: no-repeat;
-	animation: sunshine 28s ease-in-out infinite alternate;
-	mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
-}
-
-@keyframes sunshine {
-	0% { background-position: 0% 0%, 100% 0%, 50% 100%; }
-	50% { background-position: 30% 20%, 70% 30%, 40% 80%; }
-	100% { background-position: 10% 10%, 90% 20%, 55% 70%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-	[data-bg="sunshine"]::before { animation: none; }
 }
 
 /* Prose defaults, hand-written — the app has no @tailwindcss/typography. */
