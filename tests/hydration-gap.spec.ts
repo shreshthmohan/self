@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { type EntryFixture, expectEntryPage, fillEntry } from "./entry-form";
+import { waitForHydration } from "./hydration";
 
 /**
  * The report in #89: text typed between the first paint and hydration was
@@ -29,25 +30,6 @@ async function holdHydration(page: Page): Promise<() => void> {
 		await route.continue();
 	});
 	return release;
-}
-
-/**
- * Waits for React to have hydrated the form. The fiber key is an internal, and
- * it is the only signal the page gives: the document is the hydration root, so
- * there is no container that appears, and the field's own text is the thing
- * under test.
- */
-async function waitForHydration(page: Page): Promise<void> {
-	await expect
-		.poll(() =>
-			page
-				.locator("form")
-				.first()
-				.evaluate((el) =>
-					Object.keys(el).some((k) => k.startsWith("__reactFiber$")),
-				),
-		)
-		.toBe(true);
 }
 
 /** Open the editor for a freshly created entry, with hydration held. */
@@ -99,7 +81,7 @@ test("typing in the hydration gap survives hydration and posts", async ({
 	}
 
 	release();
-	if (scripted) await waitForHydration(page);
+	await waitForHydration(page);
 
 	await expect(body).toHaveValue(typed);
 	if (scripted) {
@@ -119,7 +101,6 @@ test("typing in the hydration gap survives hydration and posts", async ({
 test("a form nobody touched is left alone across hydration", async ({
 	page,
 }, testInfo) => {
-	const scripted = testInfo.project.name === "scripted";
 	const entry: EntryFixture = {
 		title: `An untouched gap entry (${testInfo.project.name})`,
 		path: `e2e-gap-untouched-${testInfo.project.name}`,
@@ -129,7 +110,7 @@ test("a form nobody touched is left alone across hydration", async ({
 
 	const release = await editWithHydrationHeld(page, entry);
 	release();
-	if (scripted) await waitForHydration(page);
+	await waitForHydration(page);
 
 	// Strategy 5 of the prototype blanked this field. The guard must not fire
 	// on a field the browser does not call dirty.
