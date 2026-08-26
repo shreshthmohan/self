@@ -75,8 +75,12 @@ export const entry = sqliteTable(
 );
 
 /**
- * One heading and one markdown body, at a fixed position within an entry. The
- * unit a search result points at and a deep link addresses.
+ * One markdown body, at a fixed position within an entry, with an optional
+ * heading. The unit a search result points at and a deep link addresses.
+ *
+ * `heading` stays NOT NULL and an empty string is the headingless case (#69).
+ * "Empty" and "absent" are the same fact here, so a nullable column buys
+ * nothing and costs a table rebuild against the additive-only rule.
  *
  * A whole-entry save is delete-then-insert of every section in one `batch()`,
  * so `id` is not stable across a save — `slug` is the section's identity.
@@ -91,9 +95,11 @@ export const section = sqliteTable(
 			.references(() => entry.id, { onDelete: "cascade" }),
 		position: integer("position").notNull(),
 		/**
-		 * Stored, human-readable, sticky. Generated from the heading once, then
-		 * left alone; a rename does not recompute it. This is the durable h2
-		 * anchor. A collision inside one entry fails loudly on the unique index.
+		 * Stored and sticky. Generated from the heading once, then left alone; a
+		 * rename does not recompute it. A section with no heading gets `s-<n>`
+		 * instead, which carries no meaning. This is the durable anchor — on the
+		 * h2 where there is one, on the `<section>` where there is not. A
+		 * collision inside one entry fails loudly on the unique index.
 		 */
 		slug: text("slug").notNull(),
 		heading: text("heading").notNull(),

@@ -80,8 +80,8 @@ export type RenderedSection = {
 };
 
 /**
- * One entry's sections, rendered. The h2 anchor is the section's STORED slug,
- * so a deep link survives a heading rename; the h3 anchors come from
+ * One entry's sections, rendered. The section anchor is the section's STORED
+ * slug, so a deep link survives a heading rename; the h3 anchors come from
  * `renderBody` and do not. See #2.
  */
 export function renderSections(
@@ -101,18 +101,26 @@ export type TocEntry = {
 };
 
 /**
- * "On this page": one node per section, with the body's h3 headings nested
- * under it. Deeper headings render with an id and stay out of the list — a
- * table of contents that mirrors every level stops being a summary.
+ * "On this page": one node per headed section, with the body's h3 headings
+ * nested under it. Deeper headings render with an id and stay out of the list —
+ * a table of contents that mirrors every level stops being a summary.
+ *
+ * A headingless section contributes nothing, and its h3s stay out with it: #2
+ * made the top level durable on purpose, so nothing is promoted into it, and a
+ * placeholder label would put a word on screen the author never wrote. See #69.
+ * A one-section entry then reaches `entry.tsx` with an empty list, which its
+ * `toc.length > 1` gate already suppresses.
  */
 export function tableOfContents(sections: RenderedSection[]): TocEntry[] {
-	return sections.map((s) => ({
-		id: s.slug,
-		text: s.heading,
-		children: s.body.headings
-			.filter((h) => h.depth === 3)
-			.map((h) => ({ id: h.id, text: h.text })),
-	}));
+	return sections
+		.filter((s) => s.heading !== "")
+		.map((s) => ({
+			id: s.slug,
+			text: s.heading,
+			children: s.body.headings
+				.filter((h) => h.depth === 3)
+				.map((h) => ({ id: h.id, text: h.text })),
+		}));
 }
 
 export { renderBody };

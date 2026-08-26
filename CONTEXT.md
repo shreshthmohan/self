@@ -9,15 +9,15 @@ Anything prose-shaped the CMS holds — a note, an article, a decision, an ethos
 _Avoid_: Post, document, page, record
 
 **Section**:
-One heading and one markdown body, at a fixed position within an entry. A section is the unit a search result points at and the unit a deep link addresses.
+One markdown body, at a fixed position within an entry, with an optional heading. A section is the unit a search result points at and the unit a deep link addresses. A section with no heading reads as prose alone.
 _Avoid_: Block, chunk, part
 
 **Slug**:
-A section's stored, human-readable identity, unique within its entry. Generated from the heading when the section is created, then sticky — a rename does not recompute it. The user can regenerate it deliberately.
+A section's stored identity, unique within its entry. Generated from the heading when the section is created, and human-readable when a heading supplied it, then sticky — a rename does not recompute it. A section with no heading gets a generated identity instead, which carries no meaning and exists only so the section can be addressed. The user can regenerate a slug deliberately.
 _Avoid_: Anchor, id, permalink
 
 **Anchor**:
-The fragment a deep link ends in. A section heading's anchor is its slug and is durable. A heading inside a section body is derived at render and is not.
+The fragment a deep link ends in. A section's anchor is its slug and is durable — it sits on the heading where there is one, and on the section itself where there is not. A heading inside a section body is derived at render and is not.
 _Avoid_: Fragment, hash
 
 **Kind**:
