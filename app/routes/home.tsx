@@ -43,9 +43,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<main>
-			<h1 className="text-2xl font-semibold">shreshth.dev</h1>
+			{/* The header already carries the site name, so the listing names
+			    what is on the page instead of repeating it. */}
+			<h1 className="text-3xl">Entries</h1>
 
-			<nav className="mt-4 flex gap-3 text-sm">
+			<nav className="mt-4 flex gap-3 text-sm text-muted">
 				<a className={kind === null ? "font-semibold" : "underline"} href="/">
 					All
 				</a>
@@ -58,29 +60,27 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 						{k}
 					</a>
 				))}
-				{owner && (
-					<a className="ml-auto underline" href="/a/new">
-						New entry
-					</a>
-				)}
 			</nav>
 
 			{entries.length === 0 ? (
 				<p className="mt-6">There is nothing to read yet.</p>
 			) : (
-				<ul className="mt-6 space-y-4">
+				<ul className="mt-6 space-y-5">
 					{entries.map((entry) => (
 						<li key={entry.id}>
-							<h2 className="text-lg">
+							<h2 className="text-xl">
 								{entry.slug ? (
-									<a className="underline" href={`/${entry.slug}`}>
+									<a
+										className="underline decoration-border underline-offset-4"
+										href={`/${entry.slug}`}
+									>
 										{entry.title}
 									</a>
 								) : (
 									entry.title
 								)}
 							</h2>
-							<p className="text-sm">
+							<p className="mt-1 text-sm text-muted">
 								{entry.kind}
 								{owner && ` · ${entry.visibility}`}
 								{owner && (

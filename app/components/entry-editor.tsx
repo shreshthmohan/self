@@ -63,7 +63,7 @@ export function EntryEditor(props: {
 						name="title"
 						defaultValue={value.title}
 						required
-						className="mt-1 w-full border border-gray-400 p-2"
+						className="mt-1 w-full border border-border bg-bg p-2"
 					/>
 				</label>
 
@@ -72,7 +72,7 @@ export function EntryEditor(props: {
 					<select
 						name="kind"
 						defaultValue={value.kind}
-						className="mt-1 w-full border border-gray-400 p-2"
+						className="mt-1 w-full border border-border bg-bg p-2"
 					>
 						{PHASE_1_KINDS.map((kind) => (
 							<option key={kind} value={kind}>
@@ -88,9 +88,9 @@ export function EntryEditor(props: {
 						name="path-slug"
 						defaultValue={value.pathSlug}
 						placeholder="generated from the title"
-						className="mt-1 w-full border border-gray-400 p-2 font-mono text-sm"
+						className="mt-1 w-full border border-border bg-bg p-2 font-mono text-sm"
 					/>
-					<span className="mt-1 block text-xs">
+					<span className="mt-1 block text-xs text-muted">
 						Renaming leaves a redirect at the old path.
 					</span>
 				</label>
@@ -106,14 +106,14 @@ export function EntryEditor(props: {
 			</div>
 
 			<div className="space-y-6">
-				<h2 className="text-lg font-semibold">Sections</h2>
+				<h2 className="text-xl">Sections</h2>
 
 				{value.sections.map((s, index) => (
 					<fieldset
 						key={index}
-						className="border border-gray-400 p-3 space-y-3"
+						className="border border-border p-3 space-y-3"
 					>
-						<legend className="px-1 text-sm">Section {index + 1}</legend>
+						<legend className="px-1 text-sm text-muted">Section {index + 1}</legend>
 						<input type="hidden" name="section-index" value={index} />
 						<input
 							type="hidden"
@@ -127,7 +127,7 @@ export function EntryEditor(props: {
 								name={`section-heading-${index}`}
 								defaultValue={s.heading}
 								required
-								className="mt-1 w-full border border-gray-400 p-2"
+								className="mt-1 w-full border border-border bg-bg p-2"
 							/>
 						</label>
 
@@ -138,7 +138,7 @@ export function EntryEditor(props: {
 									name={`section-slug-${index}`}
 									defaultValue={s.slug}
 									placeholder="from the heading"
-									className="mt-1 w-full border border-gray-400 p-2 font-mono text-sm"
+									className="mt-1 w-full border border-border bg-bg p-2 font-mono text-sm"
 								/>
 							</label>
 							<label className="block w-24">
@@ -147,7 +147,7 @@ export function EntryEditor(props: {
 									type="number"
 									name={`section-position-${index}`}
 									defaultValue={s.position}
-									className="mt-1 w-full border border-gray-400 p-2"
+									className="mt-1 w-full border border-border bg-bg p-2"
 								/>
 							</label>
 						</div>
@@ -158,7 +158,7 @@ export function EntryEditor(props: {
 								name={`section-body-${index}`}
 								defaultValue={s.body}
 								rows={12}
-								className="mt-1 w-full border border-gray-400 p-2 font-mono text-sm"
+								className="mt-1 w-full border border-border bg-bg p-2 font-mono text-sm"
 							/>
 						</label>
 
@@ -166,7 +166,7 @@ export function EntryEditor(props: {
 							type="submit"
 							name="intent"
 							value={`remove-section:${index}`}
-							className="border border-gray-400 px-3 py-1 text-sm"
+							className="border border-border px-3 py-1 text-sm"
 						>
 							Remove this section
 						</button>
@@ -177,7 +177,7 @@ export function EntryEditor(props: {
 					type="submit"
 					name="intent"
 					value="add-section"
-					className="border border-gray-400 px-3 py-1 text-sm"
+					className="border border-border px-3 py-1 text-sm"
 				>
 					Add a section
 				</button>
@@ -188,7 +188,7 @@ export function EntryEditor(props: {
 					type="submit"
 					name="intent"
 					value="save"
-					className="border border-gray-900 bg-gray-900 px-4 py-2 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900"
+					className="border border-fg bg-fg px-4 py-2 text-bg"
 				>
 					{props.conflict ? "Save anyway" : props.submitLabel}
 				</button>

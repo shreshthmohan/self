@@ -46,7 +46,7 @@ export default function Entry({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<main>
-			<p className="text-sm">
+			<p className="text-sm text-muted">
 				<a className="underline" href="/">
 					All entries
 				</a>
@@ -61,12 +61,14 @@ export default function Entry({ loaderData }: Route.ComponentProps) {
 			</p>
 
 			<article className="mt-4">
-				<h1 className="text-2xl font-semibold">{title}</h1>
-				<p className="mt-1 text-sm">{kind}</p>
+				<h1 className="text-4xl">{title}</h1>
+				<p className="mt-2 text-sm text-dim">{kind}</p>
 
 				{toc.length > 1 && (
-					<nav className="mt-6 border-l-2 border-gray-300 pl-4">
-						<h2 className="text-sm font-semibold">On this page</h2>
+					<nav className="mt-6 border-l-2 border-border pl-4">
+						<h2 className="font-sans text-xs tracking-widest text-dim uppercase">
+							On this page
+						</h2>
 						<ul className="mt-2 space-y-1 text-sm">
 							{toc.map((node) => (
 								<li key={node.id}>
@@ -95,7 +97,7 @@ export default function Entry({ loaderData }: Route.ComponentProps) {
 						{/* The h2 anchor is the section's STORED slug, so a deep link
 						    survives a heading rename. Anchors inside the body are
 						    derived at render and do not. See #2. */}
-						<h2 id={s.slug} className="text-xl font-semibold">
+						<h2 id={s.slug} className="text-2xl">
 							<a href={`#${s.slug}`}>{s.heading}</a>
 						</h2>
 						<div
@@ -109,7 +111,7 @@ export default function Entry({ loaderData }: Route.ComponentProps) {
 				))}
 
 				{sectionsWithheld && (
-					<p className="mt-8 text-sm">
+					<p className="mt-8 text-sm text-muted">
 						Some sections of this entry are not shown.
 					</p>
 				)}

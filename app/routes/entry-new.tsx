@@ -67,7 +67,7 @@ export default function NewEntry({
 
 	return (
 		<main>
-			<h1 className="text-2xl font-semibold">New entry</h1>
+			<h1 className="text-3xl">New entry</h1>
 			<EntryEditor
 				action="/a/new"
 				value={value}
