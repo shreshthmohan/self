@@ -40,9 +40,32 @@
 }
 
 /* Dark values sit on `:root`, not inside `@theme`: the utilities read the
-   variables at use time, so an override here reaches every one of them. */
+   variables at use time, so an override here reaches every one of them.
+ *
+ * Two selectors carry the same block, because a media query cannot join a
+ * selector list. `data-theme="dark"` is the reader's choice. The media query
+ * is the system default, and an explicit light switches it off. No attribute
+ * at all means system — see ADR 0015.
+ *
+ * `color-scheme` is restated under each override. Without it the scrollbars
+ * and the native form controls keep following the operating system while the
+ * page does not. */
+:root[data-theme="dark"] {
+	color-scheme: dark;
+
+	--color-bg: #16150f;
+	--color-surface: #1f1e16;
+	--color-surface-2: #272518;
+	--color-border: #3a3729;
+	--color-fg: var(--color-stone-100);
+	--color-muted: var(--color-stone-400);
+	--color-dim: var(--color-stone-500);
+}
+
 @media (prefers-color-scheme: dark) {
-	:root {
+	:root:not([data-theme="light"]) {
+		color-scheme: dark;
+
 		--color-bg: #16150f;
 		--color-surface: #1f1e16;
 		--color-surface-2: #272518;
@@ -51,6 +74,10 @@
 		--color-muted: var(--color-stone-400);
 		--color-dim: var(--color-stone-500);
 	}
+}
+
+:root[data-theme="light"] {
+	color-scheme: light;
 }
 
 /* ------------------------------------------------------------------ base */

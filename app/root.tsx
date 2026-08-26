@@ -10,6 +10,8 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { ThemeSelect } from "./components/theme-select";
+import { themeFromRequest } from "./lib/theme";
 import { getViewer, isOwner } from "./lib/viewer";
 
 /**
@@ -39,8 +41,17 @@ export const links: Route.LinksFunction = () => [
  * `<body>`, so the header's bottom rule spans the viewport.
  */
 export function Layout({ children }: { children: React.ReactNode }) {
+	const data = useRouteLoaderData<typeof loader>("root");
+
 	return (
-		<html lang="en">
+		/*
+			The server renders `data-theme` from the cookie, so the first paint is
+			already the reader's choice — no flash and no hydration mismatch. An
+			undefined read renders no attribute, which means system. After this
+			the browser owns the attribute and React never touches it again.
+			See ADR 0015.
+		*/
+		<html lang="en" data-theme={data?.theme ?? undefined}>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -112,6 +123,7 @@ function Header() {
 							</button>
 						</form>
 					)}
+					<ThemeSelect theme={data?.theme ?? null} />
 				</nav>
 			</Shell>
 		</header>
@@ -154,12 +166,19 @@ function Shell(props: { className?: string; children: React.ReactNode }) {
 }
 
 /**
- * What the header draws. One session read per request, shared with the route
+ * What the chrome draws. One session read per request, shared with the route
  * below through the memo in `getViewer` — see app/lib/viewer.ts.
+ *
+ * The theme is a cookie read and nothing more: about twenty bytes on every
+ * request, in exchange for a correct first paint.
  */
 export async function loader({ request }: Route.LoaderArgs) {
 	const viewer = await getViewer(request);
-	return { signedIn: viewer !== null, owner: isOwner(viewer) };
+	return {
+		signedIn: viewer !== null,
+		owner: isOwner(viewer),
+		theme: themeFromRequest(request),
+	};
 }
 
 export default function App() {
