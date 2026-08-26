@@ -19,9 +19,12 @@ pnpm run dev
 pnpm run test
 ```
 
-Playwright, end to end, against a real Worker and a real D1. There are no unit
-tests and no mocks: what this codebase can get wrong is a route, and a route is
-only wrong in a browser.
+`pnpm run test` runs two suites: the fidelity-gate checks first, then the
+browser suite.
+
+The browser suite is Playwright, end to end, against a real Worker and a real
+D1. There are no mocks: most of what this codebase can get wrong is a route,
+and a route is only wrong in a browser.
 
 Every spec runs **twice** — once in a browser with JavaScript, once in a
 browser with `javaScriptEnabled: false`. The second run is the point. An
@@ -48,6 +51,32 @@ Playwright starts its own server, `scripts/e2e-server.sh`. It is not
   in the app changes to let the suite sign in.
 
 A failing run leaves an HTML report and a trace in `tests/.tmp/report`.
+
+### The fidelity-gate checks
+
+```sh
+pnpm run test:gate
+```
+
+`tests/gate/`, on a config of its own, with no server and no browser. They are
+the one thing here that is not a route. The gate of
+[ADR 0007](docs/adr/0007-editor-enhances-a-textarea-behind-a-fidelity-gate.md)
+decides whether the rich editor may touch a stored body, and it is silent when
+it is wrong: a gate that passes too readily drops a table out of an entry, and
+one that refuses too readily makes the rich editor never appear. Neither shows
+an author an error, so nothing but these checks says which is happening.
+
+What they hold to: one fixture per row of the ADR 0007 table, passing or
+refusing as that row records; the schema pinned to the accepted vocabulary, so
+a new extension cannot widen it in silence; serialisation at a fixed point
+after one pass, which is what stops damage compounding across saves; and the
+renderer under the comparator proved to be the configured one, because `marked`
+runs its default renderer without a word when an override is passed the wrong
+way.
+
+They need no route, no database and no sign-in, so they carry none of the
+browser suite's start-up cost. `pnpm run test` runs them first — one command,
+nothing to remember.
 
 CI runs `typecheck`, `build`, and `test` on every push
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).

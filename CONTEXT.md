@@ -94,3 +94,7 @@ _Avoid_: Route, permalink, URL, vanity slug
 **Notice**:
 The one generic page an unpermitted reader gets — no title, no kind, no date, an invitation to sign in. Returned for a shared record read by a stranger, for a record shared with nobody, and for a slug that does not exist, so it tells a guesser nothing.
 _Avoid_: Error page, 403, paywall
+
+**Fidelity gate**:
+The check that decides whether the rich editor may touch a stored body. It parses the markdown, writes it back, renders both with the site's own renderer, and compares. It passes only when a reader would see the same page. A refusal keeps the textarea and is not an error — losing a table is allowed, losing it without being asked is not.
+_Avoid_: Validation, round-trip check, safety check, lint

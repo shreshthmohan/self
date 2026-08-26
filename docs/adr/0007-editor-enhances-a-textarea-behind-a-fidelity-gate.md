@@ -49,7 +49,9 @@ Footnotes are out because no TipTap extension exists and `marked` does not rende
 
 **A read page pays nothing.** TipTap arrives as a lazy chunk on an edit route. First paint costs about 4 kB gzip over a bare React 19 build; TipTap adds about 151 kB after the gate passes.
 
-**The gate is load-bearing and needs its own checks.** `roundtrip-check.mjs`, `vocab-check.mjs`, `converge.mjs` and `gate-check.mjs` on branch `prototype/editor` are the measurements behind every number here. Their production equivalents belong in CI, next to the JavaScript-off Playwright run that ADR 0002 requires.
+**The gate is load-bearing and needs its own checks.** `roundtrip-check.mjs`, `vocab-check.mjs`, `converge.mjs` and `gate-check.mjs` on branch `prototype/editor` are the measurements behind every number here. Their production equivalents live in `tests/gate/` and run on every push, before the JavaScript-off Playwright run that ADR 0002 requires. They hold the table above, pin the vocabulary, and check the renderer under the comparator is the configured one — `marked` runs its default renderer in silence when an override is passed the wrong way, and a gate on the wrong renderer does not fail, it passes. Ported in [#42](https://github.com/shreshthmohan/self/issues/42).
+
+**One row does not converge, and the gate is what covers it.** Measured while porting: the inline `<br>` row still moves on a second pass, because TipTap writes a hard break as trailing spaces and the count of them changes each time. The gate refuses that row, so TipTap never serialises it, and the drift never reaches a save. Convergence is asserted for the rows the gate passes, which is where it is load-bearing.
 
 **Two open questions stay open**, filed separately: who canonicalises markdown on save from both paths ([#37](https://github.com/shreshthmohan/self/issues/37)), and image upload to R2 with and without JavaScript ([#38](https://github.com/shreshthmohan/self/issues/38)). No variant answered the upload, because data URIs stood in for it.
 

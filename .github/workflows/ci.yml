@@ -29,6 +29,8 @@ jobs:
       # JavaScript and without; a second engine tests the browser, not the app.
       - run: pnpm exec playwright install --with-deps chromium
 
+      # `test` runs the fidelity-gate checks of ADR 0007 first — no server, no
+      # browser — and then the two browser projects.
       - run: pnpm run test
 
       # The report carries the trace of anything that failed.

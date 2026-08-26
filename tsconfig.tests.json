@@ -1,6 +1,22 @@
 {
 	"extends": "./tsconfig.json",
-	"include": ["playwright.config.ts", "tests/**/*"],
+	"include": [
+		"playwright.config.ts",
+		"playwright.gate.config.ts",
+		"tests/**/*",
+
+		/*
+		 * The gate checks import the gate itself, so these three are named
+		 * here as well as in the Cloudflare project. Named one by one, not as
+		 * `app/lib/**`: this program has no Worker types, so a server module
+		 * reaching it is an error, and the list says which files are allowed
+		 * to be pure. Give `markdown.ts` a server-side import and this fails
+		 * loudly, which is the intent.
+		 */
+		"app/lib/fidelity-gate.ts",
+		"app/lib/markdown.ts",
+		"app/lib/slug.ts"
+	],
 	"compilerOptions": {
 		"composite": true,
 		"strict": true,
