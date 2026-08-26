@@ -48,6 +48,19 @@
 	"vars": {
 		"BETTER_AUTH_URL": "http://localhost:5173"
 	},
+
+	// The secret NAMES, never their values. Two things read this list.
+	// `wrangler types` writes them into `worker-configuration.d.ts` from HERE
+	// rather than inferring them from a `.dev.vars` file — which is what makes
+	// `pnpm run typecheck` pass on a clean checkout that has no such file. And
+	// `wrangler dev` warns when one is missing instead of failing at the first
+	// request that reads it.
+	//
+	// Wrangler inherits nothing into a named environment, so every block below
+	// repeats this.
+	"secrets": {
+		"required": ["BETTER_AUTH_SECRET", "RESEND_API_KEY"]
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -79,6 +92,9 @@
 			"vars": {
 				"BETTER_AUTH_URL": "http://localhost:5273"
 			},
+			"secrets": {
+				"required": ["BETTER_AUTH_SECRET", "RESEND_API_KEY"]
+			},
 			"d1_databases": [
 				{
 					"binding": "DB",
@@ -107,6 +123,9 @@
 			"vars": {
 				"BETTER_AUTH_URL": "https://dev.shreshth.dev"
 			},
+			"secrets": {
+				"required": ["BETTER_AUTH_SECRET", "RESEND_API_KEY"]
+			},
 			"d1_databases": [
 				{
 					"binding": "DB",
@@ -132,6 +151,9 @@
 			"workers_dev": false,
 			"vars": {
 				"BETTER_AUTH_URL": "https://shreshth.dev"
+			},
+			"secrets": {
+				"required": ["BETTER_AUTH_SECRET", "RESEND_API_KEY"]
 			},
 			"d1_databases": [
 				{
