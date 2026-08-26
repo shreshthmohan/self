@@ -17,9 +17,9 @@ export function meta({}: Route.MetaArgs) {
  * entry, anyone else sees what visibility lets them see. `kind` is one filter,
  * never a branch (#3).
  *
- * `/b`, the blog, is a separate surface from #5 and is not built here — with
- * only `decision` and `ethos` live, it would list the same rows under a second
- * name.
+ * `/b`, the blog, is a separate surface from #5 and is not built here. It needs
+ * `article` first. A listing of decisions, ethos, and notes under a second name
+ * says nothing this one does not.
  */
 export async function loader({ request }: Route.LoaderArgs) {
 	const viewer = await getViewer(request);

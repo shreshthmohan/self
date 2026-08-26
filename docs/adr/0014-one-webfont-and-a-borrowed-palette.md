@@ -82,7 +82,7 @@ The **footer** carries a name and a short link row on a plain top rule, with no 
 
 **codeuncode's animated `sunshine` backdrop does not come along.** It is three fixed radial gradients in the accent, drifting on a 28-second loop. It is a marketing-page device, and this is a reading surface; a moving field behind a long article earns nothing.
 
-This ADR settles `prefers-color-scheme` alone. The switcher that lets a reader override it is [Theme switcher: dark, light, system](https://github.com/shreshthmohan/self/issues/72).
+This ADR settles `prefers-color-scheme` alone. The switcher that lets a reader override it is [ADR 0015](./0015-the-theme-choice-rides-a-cookie.md), from [Theme switcher: dark, light, system](https://github.com/shreshthmohan/self/issues/72).
 
 ## The prototype, and two CSS traps in it
 

@@ -122,22 +122,29 @@ export function EntryEditor(props: {
 						/>
 
 						<label className="block">
-							<span className="text-sm font-medium">Heading</span>
+							{/* Optional. A section with a body and no heading reads as
+							    prose alone; the entry's h1 is enough. Not `required`,
+							    so the browser does not block a save the server allows.
+							    See #69. */}
+							<span className="text-sm font-medium">Heading (optional)</span>
 							<input
 								name={`section-heading-${index}`}
 								defaultValue={s.heading}
-								required
 								className="mt-1 w-full border border-border bg-bg p-2"
 							/>
 						</label>
 
 						<div className="flex gap-3">
 							<label className="block grow">
+								{/* Visible and editable for every section, headed or not:
+								    #2 made a section's identity the author's to see and
+								    change, and a headingless section has one for the same
+								    reason. It holds `s-<n>` once the section is saved. */}
 								<span className="text-sm font-medium">Anchor</span>
 								<input
 									name={`section-slug-${index}`}
 									defaultValue={s.slug}
-									placeholder="from the heading"
+									placeholder="from the heading, or generated"
 									className="mt-1 w-full border border-border bg-bg p-2 font-mono text-sm"
 								/>
 							</label>
