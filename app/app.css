@@ -5,7 +5,7 @@
    built-in slots, so no new utility names are invented. */
 @theme {
 	--font-serif: "Fraunces", ui-serif, Georgia, serif;
-	--font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+	--font-sans: "Karla", ui-sans-serif, system-ui, sans-serif;
 	--font-mono:
 		"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -22,8 +22,6 @@
 
 :root {
 	color-scheme: light dark;
-	/* Swapped by the prototype's variant bar. The real app picks ONE. */
-	--font-body: "Karla";
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,16 +36,26 @@
 	}
 }
 
-/* The `font-sans` utility resolves on <body>, so re-declaring --font-body on
-   the wrapper alone changes nothing — font-family is inherited, not recomputed.
-   Re-apply it here so the variant switch bites. */
-[data-body] { font-family: var(--font-sans); }
+/* PROTOTYPE ONLY — the variant switch.
+   Two traps, both hit while building this:
+   1. font-family is INHERITED, not recomputed, so the switch has to
+      re-declare it on the element that carries the variant.
+   2. A custom property computes with its var() references ALREADY
+      substituted, on the element that declares it. An indirection like
+      `--font-sans: var(--font-body), ...` on :root therefore inherits
+      down resolved, and overriding --font-body below changes nothing.
+      Each variant redeclares --font-sans itself.
+   The real app has ONE body face, so it needs neither rule. */
+[data-body] {
+	font-family: var(--font-sans);
+}
 
-[data-body="public"] { --font-body: "Public Sans"; }
-[data-body="figtree"] { --font-body: "Figtree"; }
-[data-body="instrument"] { --font-body: "Instrument Sans"; }
-[data-body="inter"] { --font-body: "Inter"; }
-[data-body="mono"] { --font-body: "JetBrains Mono"; }
+[data-body="karla"] { --font-sans: "Karla", ui-sans-serif, system-ui, sans-serif; }
+[data-body="public"] { --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif; }
+[data-body="figtree"] { --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif; }
+[data-body="instrument"] { --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif; }
+[data-body="inter"] { --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif; }
+[data-body="mono"] { --font-sans: var(--font-mono); }
 
 html,
 body {
