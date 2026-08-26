@@ -190,7 +190,18 @@ export function EntryEditor(props: {
 				</button>
 			</div>
 
-			<div className="flex items-center gap-3">
+			{/*
+				The row is sticky, not fixed. It is the last thing in the form, so
+				it stays at the bottom of the window while the form is taller than
+				the window. At the end of the page it goes back into the form.
+				A long entry no longer costs the author a scroll to save. See #92.
+
+				"Add a section" stays above, with the sections. It changes the
+				list. This row leaves the page.
+
+				The rule and the fill divide the row from the text below it.
+			*/}
+			<div className="sticky bottom-0 z-10 flex items-center gap-3 border-t border-border bg-bg py-3">
 				<button
 					type="submit"
 					name="intent"
