@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>The hydration gap in the editor — prototype for #89</title>
+		<style>
+			:root {
+				--bg: #fbfaf8;
+				--fg: #1c1a17;
+				--muted: #6b655c;
+				--line: #ddd6cb;
+				--accent: #7a4b18;
+				--good: #1f6b3a;
+				--bad: #a12222;
+			}
+			* { box-sizing: border-box; }
+			body {
+				margin: 0;
+				padding: 3rem 1.5rem 6rem;
+				background: var(--bg);
+				color: var(--fg);
+				font: 16px/1.6 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+			}
+			main { max-width: 62rem; margin: 0 auto; }
+			h1 { font-size: 1.7rem; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+			h2 { font-size: 1.05rem; margin: 2.5rem 0 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+			.lede { max-width: 46rem; color: var(--fg); }
+			.lede strong { color: var(--accent); }
+			.mono, pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
+			.strip { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin: 0 0 0.5rem; }
+			.strip-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); width: 5.5rem; }
+			button {
+				font: inherit;
+				font-size: 0.85rem;
+				padding: 0.35rem 0.7rem;
+				border: 1px solid var(--line);
+				background: #fff;
+				color: var(--fg);
+				border-radius: 2px;
+				cursor: pointer;
+			}
+			button:hover { border-color: var(--accent); }
+			button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+			button.primary { border-color: var(--fg); font-weight: 600; }
+			.blurb { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 1.25rem 5.5rem; max-width: 44rem; }
+			.panel { border: 1px solid var(--line); background: #fff; padding: 1.25rem; }
+			.phase { display: flex; gap: 0.75rem; align-items: baseline; margin-bottom: 1rem; flex-wrap: wrap; }
+			.pill { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.15rem 0.55rem; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); }
+			.pill-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+			.note { color: var(--muted); font-size: 0.9rem; }
+			table.grid { width: 100%; border-collapse: collapse; }
+			.grid th { text-align: left; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; padding: 0 0.6rem 0.4rem 0; border-bottom: 1px solid var(--line); }
+			.grid td { padding: 0.35rem 0.6rem 0.35rem 0; border-bottom: 1px solid #f0ece5; vertical-align: top; word-break: break-word; }
+			.grid tr.bad td { background: #fdf1f1; }
+			.grid tr.good td { background: #f2f8f3; }
+			.verdict { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+			tr.bad .verdict { color: var(--bad); }
+			tr.good .verdict { color: var(--good); }
+			.verdict-line { font-weight: 600; margin: 0.9rem 0 0; }
+			.bad-text { color: var(--bad); }
+			.good-text { color: var(--good); }
+			.caret-line { color: var(--muted); font-size: 0.85rem; margin: 0.4rem 0 0; }
+			.warn { margin-top: 1rem; border-left: 3px solid var(--bad); padding: 0.25rem 0 0.25rem 0.75rem; }
+			.warn p { margin: 0.25rem 0; color: var(--muted); }
+			.posted { margin-top: 1rem; }
+			.posted pre { background: #f5f2ec; padding: 0.75rem; overflow: auto; margin: 0.4rem 0 0; }
+			.tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+			.steps { margin: 0; padding-left: 1.4rem; }
+			.steps li { margin: 0.3rem 0; color: var(--muted); }
+			.steps li.done button { opacity: 0.5; }
+			.steps li.later button { opacity: 0.75; }
+			#walk .blurb { margin-left: 0; }
+			/* the editor pane — deliberately plain */
+			#pane { border: 1px solid var(--line); background: #fff; padding: 1.25rem; }
+			.row { display: block; margin-bottom: 0.75rem; }
+			.row-check { display: flex; align-items: center; gap: 0.5rem; }
+			.row-label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.15rem; }
+			.row-check .row-label { margin: 0; order: 2; }
+			.field { width: 100%; padding: 0.4rem; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 0.9rem; }
+			.row-check .field { width: auto; order: 1; }
+			textarea.field { resize: vertical; }
+			.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+			@media (max-width: 60rem) { .cols { grid-template-columns: 1fr; } }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>The hydration gap in the editor</h1>
+			<p class="lede">
+				The edit page paints server HTML first and hydrates a moment later. In that
+				window a person can type, and today React throws the typing away
+				(<a href="https://github.com/shreshthmohan/self/issues/89">#89</a>). The
+				question this demo answers: <strong>which way of writing the fields keeps
+				what a person typed — the text, the caret, the checkbox — and still leaves
+				a working editor behind?</strong>
+			</p>
+			<p class="lede">
+				Nothing here is timed. The form below is real server HTML that is
+				<em>not</em> hydrated yet. Type into it — or press the buttons — then press
+				<strong>Hydrate now</strong> to land the runtime by hand. The table shows
+				what each field held before and after.
+			</p>
+
+			<h2>Controls</h2>
+			<div id="controls"></div>
+
+			<div class="cols">
+				<section>
+					<h2>The editor</h2>
+					<div id="pane"></div>
+				</section>
+				<section>
+					<h2>State</h2>
+					<div class="panel" id="state"></div>
+				</section>
+			</div>
+
+			<h2>Walkthroughs</h2>
+			<div id="walk"></div>
+		</main>
+		<script>
+			/* BUNDLE */
+		</script>
+	</body>
+</html>
