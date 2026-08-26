@@ -62,6 +62,12 @@ Nothing here belongs in a Workers Builds **build variable**: a build variable is
 | `RESEND_API_KEY`     | Sends the magic link. One key per environment.         | The Resend dashboard. A secret.|
 | `BETTER_AUTH_URL`    | The one origin auth answers on.                        | `wrangler.jsonc`. A plain var. |
 
+The secret **names** are declared in `wrangler.jsonc` under `secrets.required`,
+in every environment block. `wrangler types` writes the types from that list
+instead of inferring them from a `.dev.vars` file, so `pnpm run typecheck`
+passes on a clean checkout that has none — which is what CI is. The values stay
+out of the repo.
+
 `BETTER_AUTH_URL` is not a secret and is checked in, one value per environment. It is a written value and not an inferred one because a version preview URL is public and carries **production** bindings: an origin read off the request would make every preview a second front door to the production database. Auth 404s on any other origin. See [ADR 0012](docs/adr/0012-the-first-sign-in-claims-the-site.md).
 
 ### Generate the auth secret
