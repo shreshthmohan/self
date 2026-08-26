@@ -38,7 +38,7 @@ A body serif was priced and refused. Source Serif 4 alone is 1.7 times the whole
 
 The accepted cost of the system stack is that the body texture differs per operating system: SF on macOS, Segoe UI on Windows, and whatever fontconfig resolves on Linux. Only the headings, the accent, and the greys are the same everywhere. That is the trade for 0 bytes, and it is the right one on a site where [React Router v8 partial hydration on read-only pages](https://github.com/shreshthmohan/self/issues/6) already measured about 100 KB gzip of client JavaScript on an article page, and where ADR 0002 requires every route to render with JavaScript off. A webfont that blocks paint hurts most on the path that has nothing else to wait for.
 
-## The greys are stone, not Tusker's hexes
+## The text greys are stone; the surfaces are Tusker's hexes
 
 Tusker's fourteen greys — seven light, seven dark — were matched against Tailwind 4.1.17's `stone`, `zinc`, `neutral`, and `gray` scales, in CIE Lab, reading the palette out of `node_modules/tailwindcss/theme.css` rather than from memory.
 
@@ -60,7 +60,28 @@ The mapping spreads the surfaces one step apart so they stay separable, rather t
 - light: `50`, `100`, `200`, `300` for ground, surface, surface-2, border; `900`, `600`, `400` for foreground, muted, dim.
 - dark: `950`, `900`, `800`, `700`; `100`, `400`, `500`.
 
-Stone is warm, but it is not cream. Tusker's surfaces are yellow-tinted and stone's are close to neutral, so the family resemblance thins in the surfaces and the borders. That is the price of a named scale, and it is paid on purpose: a hand-carried hex list is a second palette to maintain by hand, and Tailwind's scale is already in the bundle, already has the intermediate steps this site has not needed yet, and is already what a reader of the code expects behind `bg-surface`.
+Stone is warm, but it is not cream. Tusker's surfaces are yellow-tinted and stone's are close to neutral, so the family resemblance thins in the surfaces and the borders. That was the price of a named scale, and it was paid on purpose: a hand-carried hex list is a second palette to maintain by hand, and Tailwind's scale is already in the bundle, already has the intermediate steps this site has not needed yet, and is already what a reader of the code expects behind `bg-surface`.
+
+### Amendment: the surfaces went back to the hexes
+
+The chrome shipped and the thinning was visible, not theoretical. The grounds, the entry surfaces, and every form field read as plain grey. So four tokens moved off stone and onto Tusker's own hexes, light and dark:
+
+| token | light | dark |
+| --- | --- | --- |
+| `bg` | `#fdfdfa` | `#16150f` |
+| `surface` | `#f6f4ea` | `#1f1e16` |
+| `surface-2` | `#f0eddd` | `#272518` |
+| `border` | `#e7e3d2` | `#3a3729` |
+
+**The text greys stayed on stone.** They won by a wide margin in the table above and nobody complained about them. Ink is ink in all three properties; the cream is what makes the family.
+
+The cost the paragraph above names is still real, but it is now paid for four tokens instead of fourteen. Tusker's `src/styles.css` is the source of truth for those four. A change there is copied here by hand.
+
+Two more copies of `--color-bg` are also carried by hand, because neither can read a custom property: the two `theme-color` meta tags in `app/root.tsx`, and `background_color` and `theme_color` in `public/site.webmanifest`. They move with the token or they lie.
+
+**The mapping's separability held.** Tusker spreads its own surfaces one step apart, as the stone mapping did. Measured in WCAG contrast, the new light steps are more even than the old — 1.08, 1.07, 1.09 against 1.05, 1.15, 1.19 — so a `bg-bg` field inside a `bg-surface` card reads as a field more clearly than it did on stone, not less. The border pays for that: it sits closer to `surface-2` than before, at 1.09 against 1.19. Neither palette ever met WCAG 1.4.11's 3:1 for a component boundary, so this is a step within an accepted limit, not a new one.
+
+**Text contrast held.** Against the new grounds, `fg` measures 14.9 to 17.2 to one, and `muted` 5.9 to 7.5 — both AA for body text, light and dark. `dim` is the tight one and it was already tight: 2.2 to 2.5 to one in light, 3.2 to 3.8 in dark, against 2.1 to 2.5 and 3.2 to 4.1 on stone. `dim` is therefore no more compliant and no less than the palette it replaced, and it must not carry body text at either setting.
 
 **The accent is not a Tailwind colour.** `#ffc93f` stays as it is, with `#1a1400` as its ink. No Tailwind yellow is the family's yellow, and the accent is the loudest thing the three properties share.
 

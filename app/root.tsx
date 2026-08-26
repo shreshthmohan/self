@@ -44,16 +44,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
-				{/* stone-50 and stone-950: the two --color-bg values in app.css. */}
+				{/* The two --color-bg values in app.css, by hand: a meta content
+				    attribute cannot read a custom property. Keep both in step
+				    with app.css. */}
 				<meta
 					name="theme-color"
 					media="(prefers-color-scheme: light)"
-					content="#fafaf9"
+					content="#fdfdfa"
 				/>
 				<meta
 					name="theme-color"
 					media="(prefers-color-scheme: dark)"
-					content="#0c0a09"
+					content="#16150f"
 				/>
 				<Meta />
 				<Links />
