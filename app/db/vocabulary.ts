@@ -20,8 +20,17 @@ export const KINDS = [
 ] as const;
 export type Kind = (typeof KINDS)[number];
 
-/** Live in phase 1. The rest of `KINDS` is declared, not yet reachable. */
-export const PHASE_1_KINDS: readonly Kind[] = ["decision", "ethos"];
+/**
+ * Live in phase 1. The rest of `KINDS` is declared, not yet reachable.
+ *
+ * `note` joined when a section could drop its heading (#69). Before that, a
+ * note carried a heading it did not want. The flip of this gate is the whole
+ * change: a note is an entry, on the same table, editor, and path (#70).
+ *
+ * The other kinds stay held. Each one waits for the surface that makes it worth
+ * writing — `article` waits for the blog at `/b` (#5).
+ */
+export const PHASE_1_KINDS: readonly Kind[] = ["decision", "ethos", "note"];
 
 /** The meaning a link carries. Each declares an inverse label. See #13. */
 export const RELATIONS = {
