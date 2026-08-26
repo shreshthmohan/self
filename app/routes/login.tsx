@@ -78,7 +78,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
 	if (outcome === "notice") {
 		return (
 			<main>
-				<h1 className="text-2xl font-semibold">Check your mail</h1>
+				<h1 className="text-3xl">Check your mail</h1>
 				<p className="mt-2">
 					If that address can sign in, a link is on its way. It works once and
 					expires in 15 minutes.
@@ -90,7 +90,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
 	if (outcome === "mail-failed") {
 		return (
 			<main>
-				<h1 className="text-2xl font-semibold">The mail did not send</h1>
+				<h1 className="text-3xl">The mail did not send</h1>
 				<p className="mt-2">
 					The mail service refused the message, so no link was sent. Nothing is
 					wrong with the address. The failure is in the Worker logs.
@@ -106,7 +106,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
 
 	return (
 		<main>
-			<h1 className="text-2xl font-semibold">Sign in</h1>
+			<h1 className="text-3xl">Sign in</h1>
 
 			{outcome === "not-an-address" && (
 				<p className="mt-2" role="alert">
@@ -125,9 +125,9 @@ export default function Login({ actionData }: Route.ComponentProps) {
 					type="email"
 					autoComplete="email"
 					required
-					className="mt-1 block w-full border border-gray-400 px-2 py-1"
+					className="mt-1 block w-full border border-border bg-bg px-2 py-1"
 				/>
-				<button type="submit" className="mt-4 border border-gray-400 px-3 py-1">
+				<button type="submit" className="mt-4 border border-fg bg-fg px-4 py-2 text-bg">
 					Send a sign-in link
 				</button>
 			</form>

@@ -1,16 +1,132 @@
 @import "tailwindcss" source(".");
 
+/* The token set ADR 0014 settles.
+ *
+ * Greys are Tailwind's STONE scale. Stone was nearest to thirteen of Tusker's
+ * fourteen greys, light and dark, measured in CIE Lab. The names are Tusker's
+ * verbatim, so the two code bases share one vocabulary.
+ *
+ * The accent is NOT a Tailwind color. It is the family's yellow, kept.
+ *
+ * Fonts use Tailwind's three built-in slots, so the chrome invents no new
+ * utility names. Only the headings load a webfont — Fraunces, roman only.
+ */
 @theme {
+	--font-serif: "Fraunces", ui-serif, Georgia, serif;
 	--font-sans:
-		"Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+		system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+		"Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+	--font-mono:
+		ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+		"Liberation Mono", monospace;
+
+	--color-accent: #ffc93f;
+	--color-accent-ink: #1a1400;
+
+	--color-bg: var(--color-stone-50);
+	--color-surface: var(--color-stone-100);
+	--color-surface-2: var(--color-stone-200);
+	--color-border: var(--color-stone-300);
+	--color-fg: var(--color-stone-900);
+	--color-muted: var(--color-stone-600);
+	--color-dim: var(--color-stone-400);
 }
+
+:root {
+	color-scheme: light dark;
+}
+
+/* Dark values sit on `:root`, not inside `@theme`: the utilities read the
+   variables at use time, so an override here reaches every one of them. */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-bg: var(--color-stone-950);
+		--color-surface: var(--color-stone-900);
+		--color-surface-2: var(--color-stone-800);
+		--color-border: var(--color-stone-700);
+		--color-fg: var(--color-stone-100);
+		--color-muted: var(--color-stone-400);
+		--color-dim: var(--color-stone-500);
+	}
+}
+
+/* ------------------------------------------------------------------ base */
 
 html,
 body {
-	@apply bg-white dark:bg-gray-950;
+	background: var(--color-bg);
+	color: var(--color-fg);
+}
 
-	@media (prefers-color-scheme: dark) {
-		color-scheme: dark;
-	}
+h1,
+h2,
+h3,
+h4 {
+	font-family: var(--font-serif);
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	line-height: 1.15;
+}
+
+::selection {
+	background: var(--color-accent);
+	color: var(--color-accent-ink);
+}
+
+:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 3px;
+	border-radius: 3px;
+}
+
+/* Prose defaults, hand-written — the app has no @tailwindcss/typography. */
+.prose {
+	line-height: 1.7;
+}
+.prose p {
+	margin-block: 0.9em;
+}
+.prose ul {
+	list-style: disc;
+	padding-left: 1.4em;
+	margin-block: 0.9em;
+}
+.prose ol {
+	list-style: decimal;
+	padding-left: 1.4em;
+	margin-block: 0.9em;
+}
+.prose li {
+	margin-block: 0.3em;
+}
+.prose a {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.prose code {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+	background: var(--color-surface-2);
+	padding: 0.1em 0.35em;
+	border-radius: 4px;
+}
+.prose pre {
+	font-family: var(--font-mono);
+	font-size: 0.85em;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	padding: 0.9em 1em;
+	overflow-x: auto;
+	margin-block: 1.2em;
+}
+.prose pre code {
+	background: none;
+	padding: 0;
+}
+.prose blockquote {
+	border-left: 3px solid var(--color-accent);
+	padding-left: 1em;
+	color: var(--color-muted);
+	margin-block: 1.2em;
 }

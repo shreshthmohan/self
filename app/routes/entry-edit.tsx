@@ -93,8 +93,8 @@ export default function EditEntry({
 
 	return (
 		<main>
-			<h1 className="text-2xl font-semibold">Edit entry</h1>
-			<p className="mt-1 text-sm">
+			<h1 className="text-3xl">Edit entry</h1>
+			<p className="mt-1 text-sm text-muted">
 				<a className="underline" href={`/${loaderData.value.pathSlug}`}>
 					View
 				</a>
