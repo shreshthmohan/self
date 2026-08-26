@@ -2,9 +2,12 @@
 
 /* The token set ADR 0014 settles.
  *
- * Greys are Tailwind's STONE scale. Stone was nearest to thirteen of Tusker's
- * fourteen greys, light and dark, measured in CIE Lab. The names are Tusker's
- * verbatim, so the two code bases share one vocabulary.
+ * The greys split. TEXT greys are Tailwind's STONE scale: stone was nearest to
+ * thirteen of Tusker's fourteen greys, measured in CIE Lab. SURFACE greys are
+ * Tusker's own hexes, read out of its `src/styles.css`: stone is warm but it is
+ * not cream, so the surfaces read as plain grey on the stone scale and the
+ * family resemblance thinned. The names are Tusker's verbatim, so the two code
+ * bases share one vocabulary.
  *
  * The accent is NOT a Tailwind color. It is the family's yellow, kept.
  *
@@ -23,10 +26,10 @@
 	--color-accent: #ffc93f;
 	--color-accent-ink: #1a1400;
 
-	--color-bg: var(--color-stone-50);
-	--color-surface: var(--color-stone-100);
-	--color-surface-2: var(--color-stone-200);
-	--color-border: var(--color-stone-300);
+	--color-bg: #fdfdfa;
+	--color-surface: #f6f4ea;
+	--color-surface-2: #f0eddd;
+	--color-border: #e7e3d2;
 	--color-fg: var(--color-stone-900);
 	--color-muted: var(--color-stone-600);
 	--color-dim: var(--color-stone-400);
@@ -40,10 +43,10 @@
    variables at use time, so an override here reaches every one of them. */
 @media (prefers-color-scheme: dark) {
 	:root {
-		--color-bg: var(--color-stone-950);
-		--color-surface: var(--color-stone-900);
-		--color-surface-2: var(--color-stone-800);
-		--color-border: var(--color-stone-700);
+		--color-bg: #16150f;
+		--color-surface: #1f1e16;
+		--color-surface-2: #272518;
+		--color-border: #3a3729;
 		--color-fg: var(--color-stone-100);
 		--color-muted: var(--color-stone-400);
 		--color-dim: var(--color-stone-500);
