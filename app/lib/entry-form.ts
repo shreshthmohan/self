@@ -89,7 +89,9 @@ export function validateEntry(input: EntryInput): string[] {
 	const problems: string[] = [];
 	if (input.title === "") problems.push("An entry needs a title.");
 	if (!PHASE_1_KINDS.includes(input.kind)) {
-		problems.push("Phase 1 holds decisions and ethos only.");
+		// The list builds this message, so it cannot go stale when the next
+		// kind joins. See #70.
+		problems.push(`A kind must be one of: ${PHASE_1_KINDS.join(", ")}.`);
 	}
 	if (input.sections.length === 0) {
 		problems.push("An entry needs at least one section.");
