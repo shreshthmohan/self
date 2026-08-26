@@ -1,5 +1,6 @@
 import type { EntryInput, SectionInput } from "./entries";
 import { KINDS, LEVELS, PHASE_1_KINDS, type Kind, type Level } from "../db/vocabulary";
+import { splitMarkdown } from "./markdown-split";
 
 /**
  * The editor posts the WHOLE entry in one form: every section body, every
@@ -14,7 +15,8 @@ import { KINDS, LEVELS, PHASE_1_KINDS, type Kind, type Level } from "../db/vocab
 export type Intent =
 	| { kind: "save" }
 	| { kind: "add-section" }
-	| { kind: "remove-section"; index: number };
+	| { kind: "remove-section"; index: number }
+	| { kind: "split-sections" };
 
 export type ParsedEntryForm = {
 	intent: Intent;
@@ -25,6 +27,7 @@ export type ParsedEntryForm = {
 function readIntent(formData: FormData): Intent {
 	const raw = String(formData.get("intent") ?? "save");
 	if (raw === "add-section") return { kind: "add-section" };
+	if (raw === "split-sections") return { kind: "split-sections" };
 	const remove = raw.match(/^remove-section:(\d+)$/);
 	if (remove) return { kind: "remove-section", index: Number(remove[1]) };
 	return { kind: "save" };
@@ -41,6 +44,25 @@ function readLevel(raw: string): Level {
 export function blankSection(position: number): SectionInput {
 	return { slug: "", heading: "", body: "", position, level: "inherit" };
 }
+
+/**
+ * Nothing typed into it. A fresh new-entry form is one of these, and the split
+ * replaces those rather than appending after them.
+ *
+ * It reads the anchor as well as the heading and the body. An author who typed
+ * only an anchor typed something, and #98 asked the split never to discard
+ * that. The three are trimmed alike, so a field of spaces reads the same way
+ * whichever field it is.
+ */
+const isUntouched = (s: SectionInput) =>
+	s.slug.trim() === "" && s.heading.trim() === "" && s.body.trim() === "";
+
+/**
+ * The field the split reads. An input only: it is never stored, and a save
+ * ignores it (#98). The editor writes the name as a literal, as it does for
+ * every other field here.
+ */
+const RAW_MARKDOWN_FIELD = "raw-markdown";
 
 export function parseEntryForm(formData: FormData): ParsedEntryForm {
 	const indexes = formData
@@ -66,6 +88,28 @@ export function parseEntryForm(formData: FormData): ParsedEntryForm {
 		sections = [...sections, blankSection(sections.length)];
 	}
 
+	// The split writes nothing either. It re-renders the form with the pasted
+	// prose spread over sections, which the author then edits before saving.
+	let splitTitle: string | null = null;
+	if (intent.kind === "split-sections") {
+		const split = splitMarkdown(String(formData.get(RAW_MARKDOWN_FIELD) ?? ""));
+		splitTitle = split.title;
+		if (split.sections.length > 0) {
+			// Replace a form of untouched sections; append to one that holds
+			// typing. The split never discards what the author already wrote.
+			//
+			// This assignment is also what keeps `SplitSection` honest: it is
+			// `SectionInput` restated, and a new field on `SectionInput` fails
+			// to compile here rather than going missing from a split.
+			const keep = sections.every(isUntouched) ? [] : sections;
+			const after = keep.reduce((max, s) => Math.max(max, s.position), -1) + 1;
+			sections = [
+				...keep,
+				...split.sections.map((s, i) => ({ ...s, position: after + i })),
+			];
+		}
+	}
+
 	sections = sections
 		.map((s, i) => ({ ...s, position: Number.isFinite(s.position) ? s.position : i }))
 		.sort((a, b) => a.position - b.position)
@@ -75,7 +119,9 @@ export function parseEntryForm(formData: FormData): ParsedEntryForm {
 		intent,
 		version: Number(formData.get("version") ?? 0),
 		input: {
-			title: String(formData.get("title") ?? "").trim(),
+			// A leading `#` fills the title, and only when the author left it
+			// empty. Their own words are never overwritten.
+			title: String(formData.get("title") ?? "").trim() || splitTitle || "",
 			kind: readKind(String(formData.get("kind") ?? "")),
 			isPublic: formData.get("is-public") !== null,
 			pathSlug: String(formData.get("path-slug") ?? "").trim(),
