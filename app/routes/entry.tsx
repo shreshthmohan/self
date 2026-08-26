@@ -93,13 +93,23 @@ export default function Entry({ loaderData }: Route.ComponentProps) {
 				)}
 
 				{sections.map((s) => (
-					<section key={s.slug} className="mt-8">
-						{/* The h2 anchor is the section's STORED slug, so a deep link
-						    survives a heading rename. Anchors inside the body are
-						    derived at render and do not. See #2. */}
-						<h2 id={s.slug} className="text-2xl">
-							<a href={`#${s.slug}`}>{s.heading}</a>
-						</h2>
+					// The anchor is the section's STORED slug, so a deep link survives
+					// a heading rename. Anchors inside the body are derived at render
+					// and do not. See #2.
+					//
+					// The id sits on the <section> ONLY when there is no heading. A
+					// headed section is untouched, so no anchor that works today
+					// resolves to a different element tomorrow. See #69.
+					<section
+						key={s.slug}
+						id={s.heading === "" ? s.slug : undefined}
+						className="mt-8"
+					>
+						{s.heading !== "" && (
+							<h2 id={s.slug} className="text-2xl">
+								<a href={`#${s.slug}`}>{s.heading}</a>
+							</h2>
+						)}
 						<div
 							className="prose mt-2"
 							// The body is markdown rendered by `marked` with raw HTML

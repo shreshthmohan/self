@@ -94,8 +94,14 @@ export function validateEntry(input: EntryInput): string[] {
 	if (input.sections.length === 0) {
 		problems.push("An entry needs at least one section.");
 	}
+	// A heading is optional (#69), but both fields empty is not: the old rule
+	// made an empty section unreachable by accident, and dropping it should not
+	// quietly open that door. The index stays in the message — an author with
+	// five sections has to be told which one is empty.
 	input.sections.forEach((s, i) => {
-		if (s.heading === "") problems.push(`Section ${i + 1} needs a heading.`);
+		if (s.heading === "" && s.body.trim() === "") {
+			problems.push(`Section ${i + 1} needs a heading or a body.`);
+		}
 	});
 	return problems;
 }
