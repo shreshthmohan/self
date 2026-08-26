@@ -38,6 +38,11 @@
 	}
 }
 
+/* The `font-sans` utility resolves on <body>, so re-declaring --font-body on
+   the wrapper alone changes nothing — font-family is inherited, not recomputed.
+   Re-apply it here so the variant switch bites. */
+[data-body] { font-family: var(--font-sans); }
+
 [data-body="public"] { --font-body: "Public Sans"; }
 [data-body="figtree"] { --font-body: "Figtree"; }
 [data-body="instrument"] { --font-body: "Instrument Sans"; }
