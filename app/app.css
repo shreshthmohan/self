@@ -1,16 +1,131 @@
 @import "tailwindcss" source(".");
 
+/* PROTOTYPE (#71) — proposed token set. Colours are tusker's names kept
+   verbatim so the two apps share one vocabulary. Fonts use Tailwind's three
+   built-in slots, so no new utility names are invented. */
 @theme {
-	--font-sans:
-		"Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-serif: "Fraunces", ui-serif, Georgia, serif;
+	--font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+	--font-mono:
+		"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	--color-accent: #ffc93f;
+	--color-accent-ink: #1a1400;
+	--color-bg: #fdfdfa;
+	--color-surface: #f6f4ea;
+	--color-surface-2: #f0eddd;
+	--color-border: #e7e3d2;
+	--color-fg: #141411;
+	--color-muted: #5a584f;
+	--color-dim: #9b978a;
 }
+
+:root {
+	color-scheme: light dark;
+	/* Swapped by the prototype's variant bar. The real app picks ONE. */
+	--font-body: "Karla";
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-bg: #16150f;
+		--color-surface: #1f1e16;
+		--color-surface-2: #272518;
+		--color-border: #3a3729;
+		--color-fg: #f3f1e7;
+		--color-muted: #b3afa0;
+		--color-dim: #807c6d;
+	}
+}
+
+[data-body="public"] { --font-body: "Public Sans"; }
+[data-body="figtree"] { --font-body: "Figtree"; }
+[data-body="instrument"] { --font-body: "Instrument Sans"; }
+[data-body="inter"] { --font-body: "Inter"; }
+[data-body="mono"] { --font-body: "JetBrains Mono"; }
 
 html,
 body {
-	@apply bg-white dark:bg-gray-950;
+	background: var(--color-bg);
+	color: var(--color-fg);
+}
 
-	@media (prefers-color-scheme: dark) {
-		color-scheme: dark;
-	}
+h1, h2, h3, h4 {
+	font-family: var(--font-serif);
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	line-height: 1.15;
+}
+
+::selection {
+	background: var(--color-accent);
+	color: var(--color-accent-ink);
+}
+
+:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 3px;
+	border-radius: 3px;
+}
+
+/* codeuncode's animated backdrop, on trial. */
+[data-bg="sunshine"] {
+	position: relative;
+	isolation: isolate;
+}
+[data-bg="sunshine"]::before {
+	content: "";
+	position: fixed;
+	inset: 0 0 50% 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(60% 80% at 15% 20%, rgba(255, 201, 63, 0.18), transparent 60%),
+		radial-gradient(50% 70% at 85% 10%, rgba(255, 201, 63, 0.1), transparent 65%),
+		radial-gradient(40% 60% at 50% 60%, rgba(255, 201, 63, 0.08), transparent 70%);
+	background-size: 200% 200%;
+	background-repeat: no-repeat;
+	animation: sunshine 28s ease-in-out infinite alternate;
+	mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+}
+
+@keyframes sunshine {
+	0% { background-position: 0% 0%, 100% 0%, 50% 100%; }
+	50% { background-position: 30% 20%, 70% 30%, 40% 80%; }
+	100% { background-position: 10% 10%, 90% 20%, 55% 70%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-bg="sunshine"]::before { animation: none; }
+}
+
+/* Prose defaults, hand-written — the app has no @tailwindcss/typography. */
+.prose { line-height: 1.7; }
+.prose p { margin-block: 0.9em; }
+.prose ul { list-style: disc; padding-left: 1.4em; margin-block: 0.9em; }
+.prose li { margin-block: 0.3em; }
+.prose a { text-decoration: underline; text-underline-offset: 2px; }
+.prose code {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+	background: var(--color-surface-2);
+	padding: 0.1em 0.35em;
+	border-radius: 4px;
+}
+.prose pre {
+	font-family: var(--font-mono);
+	font-size: 0.85em;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	padding: 0.9em 1em;
+	overflow-x: auto;
+	margin-block: 1.2em;
+}
+.prose pre code { background: none; padding: 0; }
+.prose blockquote {
+	border-left: 3px solid var(--color-accent);
+	padding-left: 1em;
+	color: var(--color-muted);
+	margin-block: 1.2em;
 }

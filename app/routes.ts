@@ -15,6 +15,8 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
  */
 export default [
 	index("routes/home.tsx"),
+	// PROTOTYPE (#71) — throwaway, never merges to main.
+	route("proto-chrome", "routes/proto-chrome.tsx"),
 	route("api/auth/*", "routes/auth-api.tsx"),
 	route("login", "routes/login.tsx"),
 	route("logout", "routes/logout.tsx"),

@@ -11,6 +11,8 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { getViewer } from "./lib/viewer";
 
+// PROTOTYPE (#71): every candidate face is loaded so the variant bar can
+// swap them live. The real app loads ONE body face.
 export const links: Route.LinksFunction = () => [
 	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
 	{
@@ -20,7 +22,16 @@ export const links: Route.LinksFunction = () => [
 	},
 	{
 		rel: "stylesheet",
-		href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+		href:
+			"https://fonts.googleapis.com/css2" +
+			"?family=Fraunces:opsz,wght@9..144,400..700" +
+			"&family=JetBrains+Mono:wght@400..700" +
+			"&family=Karla:ital,wght@0,400..700;1,400..700" +
+			"&family=Public+Sans:ital,wght@0,400..700;1,400..700" +
+			"&family=Figtree:ital,wght@0,400..700;1,400..700" +
+			"&family=Instrument+Sans:ital,wght@0,400..600;1,400..600" +
+			"&family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700" +
+			"&display=swap",
 	},
 ];
 
@@ -33,7 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Meta />
 				<Links />
 			</head>
-			<body className="mx-auto max-w-2xl px-4 py-12 font-sans text-gray-900 dark:text-gray-100">
+			<body className="font-sans">
 				{children}
 				<ScrollRestoration />
 				{/*
