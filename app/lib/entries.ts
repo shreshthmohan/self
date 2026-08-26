@@ -4,7 +4,8 @@ import type { BatchItem } from "drizzle-orm/batch";
 import type { Db } from "../db";
 import { entry, path, section } from "../db/schema";
 import type { Kind, Level } from "../db/vocabulary";
-import { freePathSlug, resolveSectionSlugs } from "./slug";
+import { freePathSlug } from "./paths.server";
+import { resolveSectionSlugs } from "./slug";
 import {
 	accessRowCounts,
 	canReadSection,
