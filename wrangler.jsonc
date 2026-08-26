@@ -64,6 +64,37 @@
 	],
 
 	"env": {
+		// ── E2E: the Playwright suite, LOCAL ONLY ────────────────────────────
+		//
+		// It never deploys. It exists because the suite needs a second local
+		// origin: `BETTER_AUTH_URL` names ONE origin and auth 404s on every
+		// other (ADR 0012), so the suite cannot share the top level's port with
+		// a dev server the developer already has running.
+		//
+		// `scripts/e2e-server.sh` starts it, on port 5273 and against
+		// `.wrangler/e2e-state`. `database_id` is a placeholder, like the top
+		// level's, so this environment cannot reach a real database.
+		"e2e": {
+			"name": "self-e2e",
+			"vars": {
+				"BETTER_AUTH_URL": "http://localhost:5273"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "self-e2e",
+					"database_id": "PLACEHOLDER_LOCAL_ONLY_the_e2e_suite_never_deploys",
+					"migrations_dir": "migrations"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "IMAGES",
+					"bucket_name": "self-images-e2e"
+				}
+			]
+		},
+
 		// ── Deployed DEV: worker `self-dev` at dev.shreshth.dev ──────────────
 		"dev": {
 			"name": "self-dev",
