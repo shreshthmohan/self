@@ -1,5 +1,9 @@
+import { useLayoutEffect, useRef } from "react";
+
 import type { EntryInput } from "../lib/entries";
 import { PHASE_1_KINDS } from "../db/vocabulary";
+import { restoreTyped } from "../lib/hydration-guard";
+import { takeTypedSnapshot } from "../lib/hydration-snapshot";
 
 /**
  * The editor. A real `<form>` with a named `<textarea>` per section body, so
@@ -10,6 +14,10 @@ import { PHASE_1_KINDS } from "../db/vocabulary";
  * Adding and removing a section are submit buttons carrying an `intent`. The
  * action writes nothing for those and re-renders the form with the submitted
  * text, so a round trip never costs the author their typing.
+ *
+ * Typing in the hydration gap costs the author nothing either: the client
+ * entry snapshots the typed fields before React runs, and the layout effect
+ * below puts them back (ADR 0016).
  */
 export function EntryEditor(props: {
 	value: EntryInput;
@@ -21,9 +29,26 @@ export function EntryEditor(props: {
 	deleted?: boolean;
 }) {
 	const { value, version } = props;
+	const form = useRef<HTMLFormElement>(null);
+
+	/*
+	 * A layout effect, not an effect: it runs before the browser paints, so
+	 * the author never sees the server's text flash back. The snapshot is read
+	 * once and cleared, so this is a no-op on a client-side navigation into
+	 * the editor — that has no hydration gap to bridge.
+	 */
+	useLayoutEffect(() => {
+		const snap = takeTypedSnapshot();
+		if (snap && form.current) restoreTyped(form.current, snap);
+	}, []);
 
 	return (
-		<form method="post" action={props.action} className="mt-8 space-y-8">
+		<form
+			ref={form}
+			method="post"
+			action={props.action}
+			className="mt-8 space-y-8"
+		>
 			<input type="hidden" name="version" value={version} />
 
 			{props.deleted && (
