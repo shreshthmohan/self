@@ -1,5 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
+import { waitForHydration } from "./hydration";
+
 /** One entry, as the editor's fields hold it. */
 export type EntryFixture = {
 	title: string;
@@ -24,12 +26,21 @@ export const PUBLIC_ENTRY: EntryFixture = {
 
 /**
  * Fill the editor. It is a plain `<form>` (ADR 0002), so every field here is
- * reached by its label and nothing waits for a runtime.
+ * reached by its label.
+ *
+ * The one wait is for hydration, and it is not a wait for the field: the
+ * field is in the server's HTML and a person may type into it at once. It is
+ * a wait for the runtime to stop rewriting the body, which it does on the way
+ * in. Typing under that rewrite is issue #90 — the spec filled the field, the
+ * runtime landed on it, and the save posted the server's text. `tests/
+ * hydration-gap.spec.ts` is where the gap itself is under test; every other
+ * spec wants it over with.
  */
 export async function fillEntry(
 	page: Page,
 	entry: EntryFixture,
 ): Promise<void> {
+	await waitForHydration(page);
 	await page.getByLabel("Title").fill(entry.title);
 	await page.getByLabel("Path").fill(entry.path);
 	await page.getByLabel("Heading").fill(entry.heading);

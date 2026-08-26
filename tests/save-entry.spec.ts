@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { type EntryFixture, expectEntryPage, fillEntry } from "./entry-form";
+import { waitForHydration } from "./hydration";
 
 test("the owner saves a new entry and then edits it", async ({
 	page,
@@ -23,6 +24,10 @@ test("the owner saves a new entry and then edits it", async ({
 	// The whole entry posts again, guarded by its version (ADR 0011).
 	await page.getByRole("link", { name: "Edit" }).click();
 	const edited = { ...entry, body: "The body this entry was edited to." };
+	// Let the runtime land first. It rewrites the body on the way in, so text
+	// typed before it does is discarded and this save posts the old body — the
+	// flake of #90.
+	await waitForHydration(page);
 	await page.getByLabel("Body (markdown)").fill(edited.body);
 	await page.getByRole("button", { name: "Save", exact: true }).click();
 
