@@ -88,7 +88,7 @@ What a section, or a possession's money column, does to its record's visibility.
 _Avoid_: Scope, mode, override
 
 **Path**:
-A root URL, and the row that owns it. One registry holds every path, so entries, possessions, and properties share one namespace and a collision fails loudly. A path is generated from the record's name, editable, and outlives a rename as a redirect unless the owner frees it.
+A root URL, and the row that owns it. One registry holds every path, so entries, possessions, and properties share one namespace and a collision fails loudly. A path is generated from the record's name, editable, and outlives a rename as a redirect unless the owner frees it. Deleting the record frees every word it owned — the live one and every redirect into it — so those words can be claimed again.
 _Avoid_: Route, permalink, URL, vanity slug
 
 **Notice**:
