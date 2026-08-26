@@ -74,6 +74,7 @@ export default function NewEntry({
 				version={0}
 				submitLabel="Create"
 				problems={actionData?.problems}
+				allowSplit
 			/>
 		</main>
 	);

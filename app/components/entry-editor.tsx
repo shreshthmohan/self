@@ -27,6 +27,11 @@ export function EntryEditor(props: {
 	problems?: string[];
 	conflict?: { currentVersion: number };
 	deleted?: boolean;
+	/**
+	 * Show the paste-and-split control. New entries only for now — appending a
+	 * split into an entry that already holds sections is a follow-up to #98.
+	 */
+	allowSplit?: boolean;
 }) {
 	const { value, version } = props;
 	const form = useRef<HTMLFormElement>(null);
@@ -132,6 +137,60 @@ export function EntryEditor(props: {
 
 			<div className="space-y-6">
 				<h2 className="text-xl">Sections</h2>
+
+				{/*
+					Paste prose written elsewhere and let the server cut it into
+					sections on its level-2 headings. A submit button and a
+					textarea, so it works with JavaScript off (ADR 0002). A paste
+					event handler could enhance this later; it is not needed for
+					the control to work. See #98.
+
+					The split writes nothing. It re-renders the form, and every
+					field it fills is the author's to edit before saving.
+				*/}
+				{props.allowSplit && (
+					<fieldset className="border border-border p-3 space-y-3">
+						<legend className="px-1 text-sm text-muted">
+							From markdown
+						</legend>
+						<label className="block">
+							<span className="text-sm font-medium">
+								Paste markdown
+							</span>
+							<textarea
+								name="raw-markdown"
+								rows={8}
+								placeholder="Each ## heading starts a section."
+								className="mt-1 w-full border border-border bg-bg p-2 font-mono text-sm"
+							/>
+						</label>
+						{/*
+							Outside the label on purpose. Text inside a label joins
+							the field's accessible name, and this hint names the
+							title field, which made "Title" match two controls.
+						*/}
+						<p className="text-xs text-muted">
+							This text is not saved. A leading # fills an empty
+							title.
+						</p>
+						{/*
+							`formNoValidate`, because the title is `required` and
+							the split is what fills it. Without this the browser
+							blocks the submit on an empty title and the paste never
+							reaches the server. The split saves nothing, so there is
+							nothing here for validation to protect.
+						*/}
+						<button
+							type="submit"
+							formNoValidate
+							name="intent"
+							value="split-sections"
+							className="border border-border px-3 py-1 text-sm"
+						>
+							Split into sections
+						</button>
+					</fieldset>
+				)}
 
 				{value.sections.map((s, index) => (
 					<fieldset
