@@ -43,9 +43,9 @@
    variables at use time, so an override here reaches every one of them.
  *
  * Two selectors carry the same block, because a media query cannot join a
- * selector list. `data-theme="dark"` is the reader's choice; the media query
- * is the system default, and it stands down for an explicit light. No
- * attribute at all means system — see ADR 0015.
+ * selector list. `data-theme="dark"` is the reader's choice. The media query
+ * is the system default, and an explicit light switches it off. No attribute
+ * at all means system — see ADR 0015.
  *
  * `color-scheme` is restated under each override. Without it the scrollbars
  * and the native form controls keep following the operating system while the

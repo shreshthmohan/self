@@ -9,7 +9,7 @@ import { SIGNED_OUT } from "./owner";
  */
 test.use({ storageState: SIGNED_OUT });
 
-const CONTROL = { name: "Theme" };
+const CONTROL = "Theme";
 
 test.describe("with JavaScript", () => {
 	test.skip(
@@ -22,7 +22,7 @@ test.describe("with JavaScript", () => {
 		const html = page.locator("html");
 		await expect(html).not.toHaveAttribute("data-theme");
 
-		await page.getByLabel(CONTROL.name).selectOption("dark");
+		await page.getByLabel(CONTROL).selectOption("dark");
 		// The handler mutates the DOM directly. No revalidation, no state.
 		await expect(html).toHaveAttribute("data-theme", "dark");
 
@@ -31,15 +31,15 @@ test.describe("with JavaScript", () => {
 		const response = await page.reload();
 		expect(await response?.text()).toContain('data-theme="dark"');
 		await expect(html).toHaveAttribute("data-theme", "dark");
-		await expect(page.getByLabel(CONTROL.name)).toHaveValue("dark");
+		await expect(page.getByLabel(CONTROL)).toHaveValue("dark");
 	});
 
 	test("system deletes the cookie and the attribute", async ({ page }) => {
 		await page.goto("/");
-		await page.getByLabel(CONTROL.name).selectOption("light");
+		await page.getByLabel(CONTROL).selectOption("light");
 		await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
-		await page.getByLabel(CONTROL.name).selectOption("system");
+		await page.getByLabel(CONTROL).selectOption("system");
 		await expect(page.locator("html")).not.toHaveAttribute("data-theme");
 
 		const cookies = await page.context().cookies();
@@ -49,14 +49,17 @@ test.describe("with JavaScript", () => {
 		expect(await response?.text()).not.toContain("data-theme");
 	});
 
-	test("a junk cookie reads as system", async ({ page }) => {
+	test("a junk cookie reads as system", async ({ page, baseURL }) => {
+		// A malformed escape too: the server reads the value raw, so a bad
+		// cookie cannot 500 the page it rides on.
 		await page.context().addCookies([
-			{ name: "theme", value: "neon", url: "http://localhost:5273" },
+			{ name: "theme", value: "%", url: baseURL! },
 		]);
 
 		const response = await page.goto("/");
+		expect(response?.status()).toBe(200);
 		expect(await response?.text()).not.toContain("data-theme");
-		await expect(page.getByLabel(CONTROL.name)).toHaveValue("system");
+		await expect(page.getByLabel(CONTROL)).toHaveValue("system");
 	});
 });
 
@@ -71,6 +74,7 @@ const LIGHT_BG = "rgb(253, 253, 250)"; // #fdfdfa
 // CSS alone, so this holds with the runtime removed too.
 test("the operating system decides only while nothing is chosen", async ({
 	page,
+	baseURL,
 }) => {
 	const body = page.locator("body");
 
@@ -82,16 +86,16 @@ test("the operating system decides only while nothing is chosen", async ({
 	await page.emulateMedia({ colorScheme: "light" });
 	await expect(body).toHaveCSS("background-color", LIGHT_BG);
 
-	// An explicit choice stands the media query down, in both directions.
-	await page.context().addCookies([
-		{ name: "theme", value: "dark", url: "http://localhost:5273" },
-	]);
+	// An explicit choice switches the media query off, in both directions.
+	await page
+		.context()
+		.addCookies([{ name: "theme", value: "dark", url: baseURL! }]);
 	await page.goto("/");
 	await expect(body).toHaveCSS("background-color", DARK_BG);
 
-	await page.context().addCookies([
-		{ name: "theme", value: "light", url: "http://localhost:5273" },
-	]);
+	await page
+		.context()
+		.addCookies([{ name: "theme", value: "light", url: baseURL! }]);
 	await page.emulateMedia({ colorScheme: "dark" });
 	await page.goto("/");
 	await expect(body).toHaveCSS("background-color", LIGHT_BG);
@@ -104,8 +108,8 @@ test("with JavaScript off there is no control", async ({
 	test.skip(javaScriptEnabled, "this is the scriptless project's test");
 
 	await page.goto("/");
-	// An inert widget is a lie told to the one reader who gets nothing. The
-	// page still follows the operating system, which is the default anyway.
-	await expect(page.getByLabel(CONTROL.name)).toHaveCount(0);
+	// A reader who gets no runtime gets no control, rather than a dead one.
+	// The page still follows the operating system, which is the default anyway.
+	await expect(page.getByLabel(CONTROL)).toHaveCount(0);
 	await expect(page.locator("html")).not.toHaveAttribute("data-theme");
 });
