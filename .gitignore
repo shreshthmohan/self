@@ -16,3 +16,6 @@ build/
 dist/
 .react-router/
 *.tsbuildinfo
+
+# Playwright: the dev server log, the owner's cookies, reports, traces
+tests/.tmp/

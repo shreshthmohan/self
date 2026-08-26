@@ -13,6 +13,45 @@ pnpm run dev
 
 `pnpm run typecheck` and `pnpm run build` must both pass before you push.
 
+## Test
+
+```sh
+pnpm run test
+```
+
+Playwright, end to end, against a real Worker and a real D1. There are no unit
+tests and no mocks: what this codebase can get wrong is a route, and a route is
+only wrong in a browser.
+
+Every spec runs **twice** — once in a browser with JavaScript, once in a
+browser with `javaScriptEnabled: false`. The second run is the point. An
+untested no-JS path rots within a month and it rots silently, because every
+developer runs with JavaScript on, so a route that works only after hydration
+fails the build. See [ADR 0002](docs/adr/0002-progressive-enhancement-over-selective-hydration.md).
+The flows covered are reading an entry, signing in, and saving one.
+
+Playwright starts its own server, `scripts/e2e-server.sh`. It is not
+`pnpm run dev`:
+
+- It runs the `e2e` wrangler environment on **port 5273**, so a dev server on
+  5173 can stay up. `BETTER_AUTH_URL` names one origin and auth 404s on every
+  other (ADR 0012), so the suite needs an origin of its own.
+- Its local D1 lives in `.wrangler/e2e-state`, and it is **wiped on every
+  start**. The owner claim happens once in the life of a database and the
+  magic-link counter is per hour, so a run that inherits the last run's rows is
+  a run that cannot sign in.
+- It writes `.dev.vars.e2e`, which is the suite's own throwaway secret.
+  `.dev.vars` is left alone.
+- It tees its stdout to `tests/.tmp/dev.log`. A local sign-in prints the magic
+  link to the Worker console instead of sending mail, and `tests/magic-link.ts`
+  reads the URL back out of that log. There is no mailbox to poll, and no code
+  in the app changes to let the suite sign in.
+
+A failing run leaves an HTML report and a trace in `tests/.tmp/report`.
+
+CI runs `typecheck`, `build`, and `test` on every push
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
 ## Environment variables
 
 Nothing here belongs in a Workers Builds **build variable**: a build variable is read while the build runs, and every value below is read while a request runs.

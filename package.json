@@ -10,6 +10,7 @@
 		"deploy": "wrangler deploy",
 		"dev": "react-router dev",
 		"preview": "pnpm run build && vite preview",
+		"test": "playwright test",
 		"typecheck": "pnpm run typegen && tsc -b",
 		"typegen": "wrangler types && react-router typegen"
 	},
@@ -25,6 +26,7 @@
 	"devDependencies": {
 		"@better-auth/cli": "^1.4.21",
 		"@cloudflare/vite-plugin": "1.52.1",
+		"@playwright/test": "^1.62.1",
 		"@react-router/dev": "8.3.0",
 		"@tailwindcss/vite": "4.1.17",
 		"@types/node": "24.10.1",
