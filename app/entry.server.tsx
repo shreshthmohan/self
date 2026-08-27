@@ -50,13 +50,28 @@ export default async function handleRequest(
  * Every loader and action error arrives here, including the ones React Router
  * catches and renders as a 500.
  *
- * The default handler logs the error alone. Drizzle wraps EVERY D1 failure in
- * a `DrizzleQueryError` whose message is the SQL it sent, and puts the D1
- * reason — the `D1_ERROR: ...` string, the one line that names the fault — in
- * `cause`. So the default logs a stack that says where, and never says what.
+ * The default handler passes the error object to `console.error` and stops
+ * there. Two things hide behind that:
  *
- * The chain is walked rather than read once: a cause can carry its own.
+ *   - Drizzle wraps EVERY D1 failure in a `DrizzleQueryError` whose own
+ *     message is the SQL it sent. The D1 reason is in `cause`, and D1 nests a
+ *     second `cause` under that (`cloudflare-internal:d1-api`, `_sendOrThrow`).
+ *   - A log reader that renders `stack` and not `message` drops the reason
+ *     even once the chain is walked, because a stack carries no message line
+ *     of its own.
+ *
+ * So the chain is read to a depth of five and each link is FORMATTED AS TEXT.
+ * The line holds the name, the message, and the first stack frame; a message
+ * in a string cannot be dropped by whatever reads the log.
  */
+const describe = (value: unknown): string => {
+	if (!(value instanceof Error)) return String(value);
+	// The frame is the useful half of a stack here. The whole chain shares one
+	// call path, so five repeats of it bury the five messages.
+	const frame = value.stack?.split("\n")[1]?.trim() ?? "";
+	return `${value.name}: ${value.message}${frame ? ` | ${frame}` : ""}`;
+};
+
 export const handleError: HandleErrorFunction = (error, { request }) => {
 	// An aborted request errors on the way out. Nothing failed; the reader left.
 	if (request.signal.aborted) return;
@@ -65,11 +80,16 @@ export const handleError: HandleErrorFunction = (error, { request }) => {
 	// Router's own default handler unwraps it the same way.
 	const thrown =
 		isRouteErrorResponse(error) && "error" in error ? error.error : error;
-	console.error(`${request.method} ${request.url}`, thrown);
 
+	const chain: string[] = [describe(thrown)];
 	let cause: unknown = thrown instanceof Error ? thrown.cause : undefined;
 	for (let depth = 1; cause !== undefined && depth <= 5; depth++) {
-		console.error(`  cause[${depth}]:`, cause);
+		chain.push(`cause[${depth}] ${describe(cause)}`);
 		cause = cause instanceof Error ? cause.cause : undefined;
 	}
+
+	console.error(`${request.method} ${request.url} :: ${chain.join(" <- ")}`);
+	// The stack goes out separately, so the line above stays readable and the
+	// call path is still there when it is needed.
+	if (thrown instanceof Error) console.error(thrown);
 };
