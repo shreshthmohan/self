@@ -1,5 +1,9 @@
-import type { EntryContext, RouterContextProvider } from "react-router";
-import { ServerRouter } from "react-router";
+import type {
+	EntryContext,
+	HandleErrorFunction,
+	RouterContextProvider,
+} from "react-router";
+import { isRouteErrorResponse, ServerRouter } from "react-router";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 
@@ -41,3 +45,31 @@ export default async function handleRequest(
 		status: responseStatusCode,
 	});
 }
+
+/**
+ * Every loader and action error arrives here, including the ones React Router
+ * catches and renders as a 500.
+ *
+ * The default handler logs the error alone. Drizzle wraps EVERY D1 failure in
+ * a `DrizzleQueryError` whose message is the SQL it sent, and puts the D1
+ * reason — the `D1_ERROR: ...` string, the one line that names the fault — in
+ * `cause`. So the default logs a stack that says where, and never says what.
+ *
+ * The chain is walked rather than read once: a cause can carry its own.
+ */
+export const handleError: HandleErrorFunction = (error, { request }) => {
+	// An aborted request errors on the way out. Nothing failed; the reader left.
+	if (request.signal.aborted) return;
+
+	// A route error response carries the real error under `error`; React
+	// Router's own default handler unwraps it the same way.
+	const thrown =
+		isRouteErrorResponse(error) && "error" in error ? error.error : error;
+	console.error(`${request.method} ${request.url}`, thrown);
+
+	let cause: unknown = thrown instanceof Error ? thrown.cause : undefined;
+	for (let depth = 1; cause !== undefined && depth <= 5; depth++) {
+		console.error(`  cause[${depth}]:`, cause);
+		cause = cause instanceof Error ? cause.cause : undefined;
+	}
+};
