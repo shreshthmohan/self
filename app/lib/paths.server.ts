@@ -1,4 +1,4 @@
-import { like } from "drizzle-orm";
+import { and, gte, lt } from "drizzle-orm";
 
 import type { Db } from "../db";
 import { path } from "../db/schema";
@@ -22,6 +22,20 @@ import { slugify } from "./slug";
  * word. The insert still fails on the primary key, loudly, which is the point
  * of the registry: SQLite cannot express uniqueness across three tables, and
  * this one can.
+ *
+ * The prefix is read as a RANGE, and not as a LIKE pattern on `base%`. D1
+ * caps a LIKE or GLOB pattern at 50 bytes. `slugify` emits ASCII only, so a
+ * slug of 80 characters is 80 bytes, and every slug from 50 characters up made
+ * a pattern too long. SQLite raised `SQLITE_ERROR` and no such entry could be
+ * saved. See #106.
+ *
+ * `slug` is the primary key and SQLite compares text with the BINARY
+ * collation, so the range is an index scan. It has no length limit and nothing
+ * to escape, and it selects the same rows: `slugify` emits `[a-z0-9-]` only,
+ * and none of those sorts above U+FFFF.
+ *
+ * A later prefix read must use a range too. `tests/long-title.spec.ts` tests
+ * this one.
  */
 export async function freePathSlug(
 	db: Db,
@@ -34,7 +48,7 @@ export async function freePathSlug(
 			await db
 				.select({ slug: path.slug })
 				.from(path)
-				.where(like(path.slug, `${base}%`))
+				.where(and(gte(path.slug, base), lt(path.slug, `${base}\uffff`)))
 		).map((row) => row.slug),
 	);
 	if (options.ignore) taken.delete(options.ignore);
