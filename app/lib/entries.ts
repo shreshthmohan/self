@@ -1,9 +1,10 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 
 import type { Db } from "../db";
-import { entry, path, section } from "../db/schema";
-import type { Kind, Level } from "../db/vocabulary";
+import { entry, entryLink, path, section } from "../db/schema";
+import type { Kind, Level, Relation } from "../db/vocabulary";
+import { entryToMarkdown } from "./entry-markdown";
 import { freePathSlug } from "./paths.server";
 import { resolveSectionSlugs } from "./slug";
 import {
@@ -367,4 +368,212 @@ export async function saveEntry(
 	await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 
 	return { ok: true, id, slug };
+}
+
+// ── Delete ──────────────────────────────────────────────────────────────────
+
+/**
+ * Every word the entry owns: the live one, then every `redirect` row that
+ * resolves to it. See ADR 0017.
+ *
+ * A rename points the OLD word at the new one and leaves earlier redirects
+ * pointing where they pointed, so two renames make a chain. "Resolves to it"
+ * therefore means transitively, and this walks the chain hop by hop rather
+ * than reading one level.
+ *
+ * It walks DOWN from the live word. An entry with no live `path` row owns
+ * nothing to walk from, so it frees nothing. Freeing a live word while its
+ * redirects stand is the one way to make that state, and no code path does
+ * it — a rename always leaves a redirect, and a delete takes the whole chain.
+ *
+ * The walk never truncates. A part-freed chain is the dangling redirect ADR
+ * 0017 refused, and a silent one at that, so a chain past the cap raises
+ * instead. `deleteEntry` walks before it writes, so nothing is deleted when
+ * this throws.
+ */
+
+/** D1 binds at most 100 parameters per statement. */
+const PARAMETERS_PER_READ = 99;
+
+/** Hops down one chain of redirects. A rename adds one; twenty is a wall. */
+const MAX_REDIRECT_HOPS = 20;
+
+/** The words one entry owns: its live one, and the whole chain including it. */
+type OwnedSlugs = { live: string | null; all: string[] };
+
+async function ownedSlugs(db: Db, id: number): Promise<OwnedSlugs> {
+	const [live] = await db
+		.select({ slug: path.slug })
+		.from(path)
+		.where(and(eq(path.targetType, "entry"), eq(path.targetId, id)))
+		.limit(1);
+	if (!live) return { live: null, all: [] };
+
+	const seen = new Set([live.slug]);
+	let frontier = [live.slug];
+
+	for (let hop = 0; frontier.length > 0; hop++) {
+		if (hop >= MAX_REDIRECT_HOPS) {
+			throw new Error(
+				`Entry ${id} owns a redirect chain deeper than ${MAX_REDIRECT_HOPS} hops.`,
+			);
+		}
+
+		const found: string[] = [];
+		// One read per parameter budget, so a wide hop reads every word rather
+		// than the first 99 of them.
+		for (let at = 0; at < frontier.length; at += PARAMETERS_PER_READ) {
+			const rows = await db
+				.select({ slug: path.slug })
+				.from(path)
+				.where(
+					and(
+						eq(path.targetType, "redirect"),
+						inArray(path.redirectTo, frontier.slice(at, at + PARAMETERS_PER_READ)),
+					),
+				);
+			found.push(...rows.map((r) => r.slug));
+		}
+
+		// `seen` also breaks a cycle. No code path here writes one, but the
+		// registry is one table, and an uncapped walk against a cycle hangs.
+		frontier = found.filter((slug) => !seen.has(slug));
+		for (const slug of frontier) seen.add(slug);
+	}
+
+	return { live: live.slug, all: [...seen] };
+}
+
+/**
+ * What the owner is about to lose, gathered for the confirm page. Nothing else
+ * in the system reports any of it, which is why the page exists (ADR 0017).
+ *
+ * Owner-only, so no visibility filter runs here: a private section still
+ * counts, and its words still go into the rescue text.
+ */
+export type DeleteFacts = {
+	id: number;
+	title: string;
+	version: number;
+	/** The live word, or null while the entry owns none. */
+	slug: string | null;
+	sectionCount: number;
+	/**
+	 * Links pointing IN, with the relation they carry. `entry_link` removes
+	 * rows, never entries — the entries at the other end are untouched, and
+	 * this page is the only place the lost fact is named.
+	 */
+	inboundLinks: { id: number; title: string; relation: Relation }[];
+	/** Live first, then the redirects. All of them return to the pool. */
+	freedSlugs: string[];
+	/** The whole entry, for the rescue textarea. */
+	markdown: string;
+};
+
+export async function loadDeleteFacts(
+	db: Db,
+	id: number,
+): Promise<DeleteFacts | null> {
+	const row = await loadEntryRow(db, id);
+	if (!row) return null;
+
+	const sections = await db
+		.select({
+			slug: section.slug,
+			heading: section.heading,
+			body: section.body,
+			level: section.level,
+		})
+		.from(section)
+		.where(eq(section.entryId, id))
+		.orderBy(asc(section.position));
+
+	const inboundLinks = await db
+		.select({
+			id: entry.id,
+			title: entry.title,
+			relation: entryLink.relation,
+		})
+		.from(entryLink)
+		.innerJoin(entry, eq(entry.id, entryLink.fromEntryId))
+		.where(eq(entryLink.toEntryId, id))
+		.orderBy(asc(entry.title));
+
+	return {
+		id: row.id,
+		title: row.title,
+		version: row.version,
+		slug: row.slug,
+		sectionCount: sections.length,
+		inboundLinks,
+		freedSlugs: (await ownedSlugs(db, id)).all,
+		markdown: entryToMarkdown({
+			title: row.title,
+			kind: row.kind,
+			isPublic: row.isPublic,
+			slug: row.slug,
+			sections,
+		}),
+	};
+}
+
+/** A delete that did not happen, and the reason, for the page to re-render. */
+export type DeleteFailure =
+	| { kind: "conflict"; currentVersion: number }
+	| { kind: "gone" };
+
+export type DeleteResult =
+	| {
+			ok: true;
+			title: string;
+			/** The live word, named rather than left first in the list below. */
+			slug: string | null;
+			/** Every word freed: the live one and its redirects. */
+			freedSlugs: string[];
+	  }
+	| { ok: false; failure: DeleteFailure };
+
+/**
+ * The hard delete, guarded by `entry.version` exactly as a save is.
+ *
+ * One `batch()`: the guarded `DELETE FROM entry`, then one `DELETE FROM path`
+ * per word the entry owned. Sections, `entry_link` at both ends,
+ * `entry_audience` and `entry_user` go by cascade and need no statement here.
+ * See ADR 0017.
+ *
+ * The guard is NOT atomic, and ADR 0011 already admits why: a `WHERE version =
+ * ?` that matches no row is not an error, so the batch would commit the path
+ * deletes beside an entry that survived. The version is read first and a
+ * millisecond race survives the gap. The race this guards is the minutes
+ * between reading the confirm page and pressing the button.
+ */
+export async function deleteEntry(
+	db: Db,
+	id: number,
+	expectedVersion: number,
+): Promise<DeleteResult> {
+	const [live] = await db
+		.select({ version: entry.version, title: entry.title })
+		.from(entry)
+		.where(eq(entry.id, id))
+		.limit(1);
+	if (!live) return { ok: false, failure: { kind: "gone" } };
+	if (live.version !== expectedVersion) {
+		return { ok: false, failure: { kind: "conflict", currentVersion: live.version } };
+	}
+
+	const owned = await ownedSlugs(db, id);
+
+	const writes: BatchItem<"sqlite">[] = [
+		db.delete(entry).where(and(eq(entry.id, id), eq(entry.version, expectedVersion))),
+		...owned.all.map((slug) => db.delete(path).where(eq(path.slug, slug))),
+	];
+	await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+
+	return {
+		ok: true,
+		title: live.title,
+		slug: owned.live,
+		freedSlugs: owned.all,
+	};
 }

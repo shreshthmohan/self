@@ -34,18 +34,43 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return {
 		owner: isOwner(viewer),
 		kind: kind ?? null,
+		// What the delete of #99 lands with. It rides the query string because
+		// there is no flash store: a parameter reads with JavaScript off and
+		// survives a refresh, and it names an entry that no longer exists, so
+		// it tells a stranger nothing they could not read on the listing.
+		deleted: url.searchParams.get("deleted"),
+		freed: url.searchParams.get("freed"),
+		/** How many redirects went with the live word. See ADR 0017. */
+		freedOthers: Number(url.searchParams.get("freedOthers") ?? 0),
 		entries: await listEntries(db(), { viewer, kind }),
 	};
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-	const { entries, kind, owner } = loaderData;
+	const { entries, kind, owner, deleted, freed, freedOthers } = loaderData;
 
 	return (
 		<main>
 			{/* The header already carries the site name, so the listing names
 			    what is on the page instead of repeating it. */}
 			<h1 className="text-3xl">Entries</h1>
+
+			{deleted !== null && (
+				<p className="mt-4 border border-border p-3 text-sm">
+					Deleted <strong>{deleted}</strong>.
+					{freed !== null && (
+						<>
+							{" "}
+							The word <code>/{freed}</code> is free again
+							{freedOthers > 0 &&
+								`, with ${freedOthers} ${
+									freedOthers === 1 ? "redirect" : "redirects"
+								} into it`}
+							.
+						</>
+					)}
+				</p>
+			)}
 
 			<nav className="mt-4 flex gap-3 text-sm text-muted">
 				<a className={kind === null ? "font-semibold" : "underline"} href="/">

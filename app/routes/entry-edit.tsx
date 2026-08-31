@@ -6,6 +6,7 @@ import { EntryEditor } from "../components/entry-editor";
 import { db } from "../lib/db.server";
 import { loadEntry, saveEntry, type LoadedEntry } from "../lib/entries";
 import {
+	blankEntry,
 	dropUntouchedSections,
 	intentWrites,
 	parseEntryForm,
@@ -18,22 +19,43 @@ import { notFound, requireOwner } from "../lib/viewer";
 export function meta({ loaderData }: Route.MetaArgs) {
 	return [
 		{
-			title: loaderData
-				? `Edit ${loaderData.value.title} — shreshth.dev`
-				: "Edit",
+			title:
+				loaderData && !loaderData.gone
+					? `Edit ${loaderData.value.title} — shreshth.dev`
+					: "Edit",
 		},
 	];
 }
 
+/**
+ * The editor's fields, or the news that there is no entry behind them.
+ *
+ * A missing entry does NOT answer the generic notice here. This route is
+ * behind `requireOwner`, so it is no existence oracle either way (ADR 0003) —
+ * and the notice would break the one thing ADR 0011 asks this page to do. A
+ * save into a deleted entry re-renders the editor with the author's typing and
+ * **Recreate as a new entry**; the loader revalidates that page straight after
+ * the action, so a 404 here would throw the banner and the whole tab of typing
+ * away at exactly the moment they matter.
+ *
+ * So a gone entry renders the editor with the `deleted` banner, and the form
+ * posts to the create path. Reaching `/a/<unknown>/edit` by hand lands on the
+ * same page, which is the truth: there is no entry, and here is a form.
+ */
 export async function loader({ params, request }: Route.LoaderArgs) {
 	const viewer = await requireOwner(request);
 	const id = Number(params.id);
 	if (!Number.isInteger(id)) notFound();
 
 	const entry = await loadEntry(db(), id, viewer);
-	if (!entry) notFound();
+	if (!entry) return { id, version: 0, gone: true, value: blankEntry() };
 
-	return { id: entry.id, version: entry.version, value: toFormEntry(entry) };
+	return {
+		id: entry.id,
+		version: entry.version,
+		gone: false,
+		value: toFormEntry(entry),
+	};
 }
 
 /** A stored entry, as the editor's fields hold it. */
@@ -136,11 +158,20 @@ export default function EditEntry({
 	return (
 		<main>
 			<h1 className="text-3xl">Edit entry</h1>
-			<p className="mt-1 text-sm text-muted">
-				<a className="underline" href={`/${loaderData.value.pathSlug}`}>
-					View
-				</a>
-			</p>
+			{/* Both links point at an entry. Neither is offered once it is gone. */}
+			{!loaderData.gone && (
+				<p className="mt-1 text-sm text-muted">
+					<a className="underline" href={`/${loaderData.value.pathSlug}`}>
+						View
+					</a>
+					{" · "}
+					{/* The delete link sits here and nowhere else. The entry page is
+					    a reader's view, even for the owner. See ADR 0017. */}
+					<a className="underline" href={`/a/${loaderData.id}/delete`}>
+						Delete
+					</a>
+				</p>
+			)}
 			<EntryEditor
 				action={`/a/${loaderData.id}/edit`}
 				value={value}
@@ -149,7 +180,10 @@ export default function EditEntry({
 				continueLabel="Save and Continue"
 				problems={actionData?.problems}
 				conflict={actionData?.conflict}
-				deleted={actionData?.deleted}
+				// The loader answers this too. A save into a deleted entry returns
+				// the flag, and the revalidation that follows finds the entry gone
+				// and says the same thing.
+				deleted={actionData?.deleted || loaderData.gone}
 				saved={actionData?.saved}
 				addedSection={actionData?.addedSection}
 			/>
