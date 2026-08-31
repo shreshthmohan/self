@@ -4,17 +4,14 @@ import type { Route } from "./+types/entry-edit";
 
 import { EntryEditor } from "../components/entry-editor";
 import { db } from "../lib/db.server";
-import {
-	loadEntry,
-	saveEntry,
-	type EntryInput,
-	type LoadedEntry,
-} from "../lib/entries";
+import { loadEntry, saveEntry, type LoadedEntry } from "../lib/entries";
 import {
 	dropUntouchedSections,
 	intentWrites,
 	parseEntryForm,
+	toFormSections,
 	validateEntry,
+	type FormEntry,
 } from "../lib/entry-form";
 import { notFound, requireOwner } from "../lib/viewer";
 
@@ -36,17 +33,24 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const entry = await loadEntry(db(), id, viewer);
 	if (!entry) notFound();
 
-	return { id: entry.id, version: entry.version, value: toInput(entry) };
+	return { id: entry.id, version: entry.version, value: toFormEntry(entry) };
 }
 
 /** A stored entry, as the editor's fields hold it. */
-function toInput(entry: LoadedEntry): EntryInput {
+function toFormEntry(entry: LoadedEntry): FormEntry {
 	return {
 		title: entry.title,
 		kind: entry.kind,
 		isPublic: entry.isPublic,
 		pathSlug: entry.slug ?? "",
-		sections: entry.sections,
+		// The stored sections have no form identity yet. One is minted here, on
+		// the way into the first render, and the form carries it from then on.
+		//
+		// Every call mints a fresh set, and that costs nothing. A navigation
+		// into the editor mounts the fieldsets anyway, and Save and Continue
+		// replaces the form with what the database holds, which is a remount
+		// on purpose.
+		sections: toFormSections(entry.sections),
 	};
 }
 
@@ -93,7 +97,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 		const saved = await loadEntry(db(), id, viewer);
 		if (!saved) notFound();
 		return {
-			value: toInput(saved),
+			value: toFormEntry(saved),
 			version: saved.version,
 			problems: [] as string[],
 			saved: true,

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 
-import type { EntryInput } from "../lib/entries";
+import type { FormEntry } from "../lib/entry-form";
 import { PHASE_1_KINDS } from "../db/vocabulary";
 import { restoreTyped } from "../lib/hydration-guard";
 import { takeTypedSnapshot } from "../lib/hydration-snapshot";
@@ -31,7 +31,7 @@ import { takeTypedSnapshot } from "../lib/hydration-snapshot";
  * below puts them back (ADR 0016).
  */
 export function EntryEditor(props: {
-	value: EntryInput;
+	value: FormEntry;
 	version: number;
 	action: string;
 	submitLabel: string;
@@ -217,14 +217,35 @@ export function EntryEditor(props: {
 					</fieldset>
 				)}
 
+				{/*
+					Keyed on the section's uid, never on the index. An index key
+					is right only while every submit is a full navigation. The
+					browser then throws the DOM away, so the server's text is
+					the only text.
+
+					A client-side submit (#111) keeps the fieldsets across the
+					round trip. Every field below is uncontrolled, so a removed
+					section shifts the rest one caption up. The uid makes React
+					unmount the fieldset that left. See #110.
+				*/}
 				{value.sections.map((s, index) => (
 					<fieldset
-						key={index}
+						key={s.uid}
+						// The fragment the remove and split buttons aim at (#108).
+						// It names a POSITION, so it stays on the index, while the
+						// key names the section itself.
 						id={`section-${index}`}
 						className="border border-border p-3 space-y-3"
 					>
 						<legend className="px-1 text-sm text-muted">Section {index + 1}</legend>
 						<input type="hidden" name="section-index" value={index} />
+						{/* The form sends the identity to the server and gets it
+						    back. Nothing stores it, and a save ignores it. */}
+						<input
+							type="hidden"
+							name={`section-uid-${index}`}
+							value={s.uid}
+						/>
 						<input
 							type="hidden"
 							name={`section-level-${index}`}
