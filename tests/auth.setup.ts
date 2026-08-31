@@ -20,7 +20,7 @@ setup("the owner claims the site and seeds an entry", async ({ page }) => {
 
 	await page.goto("/a/new");
 	await fillEntry(page, PUBLIC_ENTRY);
-	await page.getByRole("button", { name: "Create" }).click();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
 	await expectEntryPage(page, PUBLIC_ENTRY);
 
 	await page.context().storageState({ path: OWNER_STATE });

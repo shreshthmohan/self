@@ -15,6 +15,17 @@ import { takeTypedSnapshot } from "../lib/hydration-snapshot";
  * action writes nothing for those and re-renders the form with the submitted
  * text, so a round trip never costs the author their typing.
  *
+ * A round trip is a full document navigation, so the browser goes back to the
+ * top of the page. Remove and split therefore carry a URL fragment on their
+ * `formAction`. It names what the author wants to look at next, and every
+ * section fieldset carries the matching id.
+ *
+ * Add uses `autofocus` on the new heading instead. The browser scrolls a
+ * focused field into view, so the one attribute buys both. A URL fragment here
+ * would cancel that focus: a fragment target wins over an autofocus candidate.
+ *
+ * All of it is plain HTML. It works with JavaScript off. See #108.
+ *
  * Typing in the hydration gap costs the author nothing either: the client
  * entry snapshots the typed fields before React runs, and the layout effect
  * below puts them back (ADR 0016).
@@ -24,7 +35,16 @@ export function EntryEditor(props: {
 	version: number;
 	action: string;
 	submitLabel: string;
+	/** The second submit: it saves and returns this editor. See #108. */
+	continueLabel: string;
 	problems?: string[];
+	/** A write landed and the author is still here, after `save-and-stay`. */
+	saved?: boolean;
+	/**
+	 * The last section was added by the round trip that rendered this. Its
+	 * heading takes focus, so the author can type straight into it.
+	 */
+	addedSection?: boolean;
 	conflict?: { currentVersion: number };
 	deleted?: boolean;
 	/**
@@ -76,6 +96,10 @@ export function EntryEditor(props: {
 					</a>
 					.
 				</p>
+			)}
+
+			{props.saved && (
+				<p className="border border-border p-3 text-sm">Saved.</p>
 			)}
 
 			{props.problems && props.problems.length > 0 && (
@@ -135,7 +159,7 @@ export function EntryEditor(props: {
 				</label>
 			</div>
 
-			<div className="space-y-6">
+			<div id="sections" className="space-y-6">
 				<h2 className="text-xl">Sections</h2>
 
 				{/*
@@ -185,6 +209,7 @@ export function EntryEditor(props: {
 							formNoValidate
 							name="intent"
 							value="split-sections"
+							formAction={`${props.action}#sections`}
 							className="border border-border px-3 py-1 text-sm"
 						>
 							Split into sections
@@ -206,6 +231,10 @@ export function EntryEditor(props: {
 				{value.sections.map((s, index) => (
 					<fieldset
 						key={s.uid}
+						// The fragment the remove and split buttons aim at (#108).
+						// It names a POSITION, so it stays on the index, while the
+						// key names the section itself.
+						id={`section-${index}`}
 						className="border border-border p-3 space-y-3"
 					>
 						<legend className="px-1 text-sm text-muted">Section {index + 1}</legend>
@@ -232,6 +261,10 @@ export function EntryEditor(props: {
 							<input
 								name={`section-heading-${index}`}
 								defaultValue={s.heading}
+								autoFocus={
+									props.addedSection &&
+									index === value.sections.length - 1
+								}
 								className="mt-1 w-full border border-border bg-bg p-2"
 							/>
 						</label>
@@ -271,10 +304,19 @@ export function EntryEditor(props: {
 							/>
 						</label>
 
+						{/*
+							The URL fragment lands the author on the section above
+							the one they removed. It lands them at the top of the
+							list when they removed the first.
+						*/}
 						<button
 							type="submit"
+							formNoValidate
 							name="intent"
 							value={`remove-section:${index}`}
+							formAction={`${props.action}#${
+								index === 0 ? "sections" : `section-${index - 1}`
+							}`}
 							className="border border-border px-3 py-1 text-sm"
 						>
 							Remove this section
@@ -282,8 +324,18 @@ export function EntryEditor(props: {
 					</fieldset>
 				))}
 
+				{/*
+					No URL fragment here. The new section's heading is autofocused
+					and the browser scrolls a focused field into view. A fragment
+					on this button would cancel that focus rather than add to it.
+
+					`formNoValidate`, for the reason the split has it. The title
+					is `required` and this button writes nothing, so browser
+					validation here only blocks a section the author asked for.
+				*/}
 				<button
 					type="submit"
+					formNoValidate
 					name="intent"
 					value="add-section"
 					className="border border-border px-3 py-1 text-sm"
@@ -311,6 +363,19 @@ export function EntryEditor(props: {
 					className="border border-fg bg-fg px-4 py-2 text-bg"
 				>
 					{props.conflict ? "Save anyway" : props.submitLabel}
+				</button>
+				{/*
+					The same write, a different answer: the editor comes back
+					instead of the entry. A long entry is saved often, and each
+					save should not cost the author the trip back. See #108.
+				*/}
+				<button
+					type="submit"
+					name="intent"
+					value="save-and-stay"
+					className="border border-border px-4 py-2"
+				>
+					{props.continueLabel}
 				</button>
 				<a className="underline" href="/">
 					Cancel

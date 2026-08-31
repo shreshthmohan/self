@@ -90,9 +90,9 @@ test("a section keeps its identity across add, remove and a failed save", async 
 		{ caption: "Section 2", heading: "Third", body: "Under the third.", uid: before[2].uid },
 	]);
 
-	// A save the server refuses hands the form back. The uids come back with
-	// it: the empty section is the one at fault, and the two written ones are
-	// still themselves.
+	// A save the server refuses hands the form back, empty section and all
+	// (#108). Every uid comes back with it, and each one is still on the
+	// section that had it.
 	await page.getByRole("button", { name: "Add a section" }).click();
 	const withBlank = await rendered(page);
 	expect(withBlank.map((s) => s.uid).slice(0, 2)).toEqual([
@@ -100,8 +100,13 @@ test("a section keeps its identity across add, remove and a failed save", async 
 		before[2].uid,
 	]);
 
-	await page.getByRole("button", { name: "Create" }).click();
-	await expect(page.getByText("Section 3 needs a heading or a body.")).toBeVisible();
+	// Two sections asking for one anchor is a save the server refuses.
+	await page.getByLabel("Anchor").nth(0).fill("same");
+	await page.getByLabel("Anchor").nth(1).fill("same");
+	await page.getByRole("button", { name: "Create", exact: true }).click();
+	await expect(
+		page.getByText('Two sections both want the anchor "same".'),
+	).toBeVisible();
 	expect(await rendered(page)).toEqual(withBlank);
 });
 
@@ -131,7 +136,7 @@ test("a save ignores the uid", async ({ page }, testInfo) => {
 	await page.getByLabel("Path").fill(path);
 	await page.getByLabel("Heading (optional)").fill("Kept");
 	await page.getByLabel("Body (markdown)").fill(body);
-	await page.getByRole("button", { name: "Create" }).click();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
 
 	// The reader's page carries no uid. It is a form field and nothing else.
 	await expect(page).toHaveURL(`/${path}`);

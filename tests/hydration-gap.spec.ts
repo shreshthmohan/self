@@ -39,7 +39,7 @@ async function editWithHydrationHeld(
 ): Promise<() => void> {
 	await page.goto("/a/new");
 	await fillEntry(page, entry);
-	await page.getByRole("button", { name: "Create" }).click();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
 	await expectEntryPage(page, entry);
 
 	const editHref = await page

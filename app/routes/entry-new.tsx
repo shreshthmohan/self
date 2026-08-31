@@ -7,6 +7,8 @@ import { db } from "../lib/db.server";
 import { createEntry } from "../lib/entries";
 import {
 	blankSection,
+	dropUntouchedSections,
+	intentWrites,
 	parseEntryForm,
 	validateEntry,
 	type FormEntry,
@@ -44,17 +46,30 @@ export async function loader({ request }: Route.LoaderArgs) {
  * of posting it a second time. The back button can still double-post; a
  * one-time token needs a store and a sweep, and nobody has asked for one.
  * See ADR 0011.
+ *
+ * Create and Continue redirects too, into the new entry's editor. Re-rendering
+ * this route instead would leave the author on `/a/new`, where the next save
+ * would make a second entry. See #108.
  */
 export async function action({ request }: Route.ActionArgs) {
 	await requireOwner(request);
 	const { intent, input } = parseEntryForm(await request.formData());
 
-	if (intent.kind !== "save") return { value: input, problems: [] };
+	if (!intentWrites(intent)) {
+		return {
+			value: input,
+			problems: [],
+			addedSection: intent.kind === "add-section",
+		};
+	}
 
-	const problems = validateEntry(input);
+	// The write drops what the author never typed into. `input` keeps it, so a
+	// save that fails returns the form they submitted (#108).
+	const write = dropUntouchedSections(input);
+	const problems = validateEntry(write);
 	if (problems.length > 0) return { value: input, problems };
 
-	const result = await createEntry(db(), input);
+	const result = await createEntry(db(), write);
 	if (!result.ok) {
 		const failure = result.failure;
 		return {
@@ -66,7 +81,9 @@ export async function action({ request }: Route.ActionArgs) {
 		};
 	}
 
-	throw redirect(`/${result.slug}`);
+	throw redirect(
+		intent.kind === "save" ? `/${result.slug}` : `/a/${result.id}/edit`,
+	);
 }
 
 export default function NewEntry({
@@ -83,7 +100,9 @@ export default function NewEntry({
 				value={value}
 				version={0}
 				submitLabel="Create"
+				continueLabel="Create and Continue"
 				problems={actionData?.problems}
+				addedSection={actionData?.addedSection}
 				allowSplit
 			/>
 		</main>

@@ -40,9 +40,15 @@ export function toFormSections(sections: SectionInput[]): FormSection[] {
 
 export type Intent =
 	| { kind: "save" }
+	/** A save that returns the editor rather than the entry. See #108. */
+	| { kind: "save-and-stay" }
 	| { kind: "add-section" }
 	| { kind: "remove-section"; index: number }
 	| { kind: "split-sections" };
+
+/** The two intents that write. Everything else re-renders the form. */
+export const intentWrites = (intent: Intent) =>
+	intent.kind === "save" || intent.kind === "save-and-stay";
 
 export type ParsedEntryForm = {
 	intent: Intent;
@@ -53,6 +59,7 @@ export type ParsedEntryForm = {
 function readIntent(formData: FormData): Intent {
 	const raw = String(formData.get("intent") ?? "save");
 	if (raw === "add-section") return { kind: "add-section" };
+	if (raw === "save-and-stay") return { kind: "save-and-stay" };
 	if (raw === "split-sections") return { kind: "split-sections" };
 	const remove = raw.match(/^remove-section:(\d+)$/);
 	if (remove) return { kind: "remove-section", index: Number(remove[1]) };
@@ -164,6 +171,25 @@ export function parseEntryForm(formData: FormData): ParsedEntryForm {
 	};
 }
 
+/**
+ * What a write keeps. Every section the author never typed into is gone, so a
+ * spare section costs them nothing (#108).
+ *
+ * The test is the split's, unchanged. An anchor alone is typing (#98).
+ *
+ * A caller applies this to what it writes and what it validates, NOT to what
+ * it renders back. A failed save must return the form the author submitted,
+ * with its empty sections still on the page for them to fill.
+ */
+export function dropUntouchedSections(input: EntryInput): EntryInput {
+	return {
+		...input,
+		sections: input.sections
+			.filter((s) => !isUntouched(s))
+			.map((s, i) => ({ ...s, position: i })),
+	};
+}
+
 /** What the author must supply before a save is worth attempting. */
 export function validateEntry(input: EntryInput): string[] {
 	const problems: string[] = [];
@@ -176,14 +202,10 @@ export function validateEntry(input: EntryInput): string[] {
 	if (input.sections.length === 0) {
 		problems.push("An entry needs at least one section.");
 	}
-	// A heading is optional (#69), but both fields empty is not: the old rule
-	// made an empty section unreachable by accident, and dropping it should not
-	// quietly open that door. The index stays in the message — an author with
-	// five sections has to be told which one is empty.
-	input.sections.forEach((s, i) => {
-		if (s.heading === "" && s.body.trim() === "") {
-			problems.push(`Section ${i + 1} needs a heading or a body.`);
-		}
-	});
+	// There is no per-section "needs a heading or a body" rule any more. The
+	// drop above runs first, so the rule had no case left to catch. A section
+	// that survives holds a heading, a body, or an anchor. #69, #75 and #98
+	// each allow one of those alone. A form of nothing but untouched sections
+	// lands on the message above instead, which is the one the author needs.
 	return problems;
 }
