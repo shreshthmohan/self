@@ -38,6 +38,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		pathSlug: entry.slug ?? "",
 		// The stored sections have no form identity yet. One is minted here, on
 		// the way into the first render, and the form carries it from then on.
+		//
+		// A second loader run mints a second set. That costs nothing: the form
+		// answers with `actionData` after a submit, and a navigation into the
+		// editor mounts the fieldsets afresh anyway.
 		sections: toFormSections(entry.sections),
 	};
 	return { id: entry.id, version: entry.version, value };

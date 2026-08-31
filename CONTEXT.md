@@ -67,6 +67,10 @@ _Avoid_: State, stage, phase
 Unsaved typing the editor keeps in one browser. It never reaches the database, it belongs to the tab that made it, and a save clears it. Not an unpublished entry — an entry nobody can read is private, which is a matter of visibility, not of being a draft.
 _Avoid_: Draft, autosave, working copy
 
+**Form identity**:
+The identity a section carries while the editor holds it. The form mints one for a section that arrives without it, sends it back as the hidden field `section-uid`, and keys the section on it. It never reaches the database, and a save ignores it. Not a slug: a slug is stored, the author edits it, and a new section has none. The code calls it a uid.
+_Avoid_: Key, temporary id, client id
+
 **Visibility**:
 Who can read a record. Read, never written: a record is public if its public flag is set, shared if it has any access row, and private if it has none. Private is not a state the owner sets — it is the state of having shared with nobody.
 _Avoid_: Published, permission, privacy, access level

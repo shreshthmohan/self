@@ -194,13 +194,14 @@ export function EntryEditor(props: {
 
 				{/*
 					Keyed on the section's uid, never on the index. An index key
-					is right only while every submit is a full navigation: the
-					DOM goes away and the server's text is the only text. The
-					moment a submit is client-side (#111) the fieldsets survive
-					the round trip, every field below is uncontrolled, and a
-					removed section shifts the rest one caption up. The uid
-					makes React unmount the fieldset that actually left. See
-					#110.
+					is right only while every submit is a full navigation. The
+					browser then throws the DOM away, so the server's text is
+					the only text.
+
+					A client-side submit (#111) keeps the fieldsets across the
+					round trip. Every field below is uncontrolled, so a removed
+					section shifts the rest one caption up. The uid makes React
+					unmount the fieldset that left. See #110.
 				*/}
 				{value.sections.map((s, index) => (
 					<fieldset
@@ -209,8 +210,8 @@ export function EntryEditor(props: {
 					>
 						<legend className="px-1 text-sm text-muted">Section {index + 1}</legend>
 						<input type="hidden" name="section-index" value={index} />
-						{/* The identity, back to the server and out again. It is
-						    never stored; a save ignores it. */}
+						{/* The form sends the identity to the server and gets it
+						    back. Nothing stores it, and a save ignores it. */}
 						<input
 							type="hidden"
 							name={`section-uid-${index}`}

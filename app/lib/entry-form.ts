@@ -97,9 +97,9 @@ export function parseEntryForm(formData: FormData): ParsedEntryForm {
 		.filter((n) => Number.isInteger(n));
 
 	let sections: FormSection[] = indexes.map((index, order) => ({
-		// The identity the form is carrying, or a new one for a section that
-		// arrives without it — a form rendered before #110, or one a script
-		// built by hand.
+		// The identity the form carries. A section that arrives without one
+		// gets a new one: a page rendered by the deploy before #110 is still
+		// open in somebody's tab.
 		uid: String(formData.get(`section-uid-${index}`) ?? "").trim() || newUid(),
 		slug: String(formData.get(`section-slug-${index}`) ?? "").trim(),
 		heading: String(formData.get(`section-heading-${index}`) ?? "").trim(),
