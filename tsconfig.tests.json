@@ -15,6 +15,7 @@
 		"app/lib/fidelity-gate.ts",
 		"app/lib/markdown.ts",
 		"app/lib/markdown-split.ts",
+		"app/lib/preview.ts",
 		"app/lib/slug.ts",
 		"app/db/vocabulary.ts"
 	],

@@ -67,6 +67,10 @@ _Avoid_: State, stage, phase
 Unsaved typing the editor keeps in one browser. It never reaches the database, it belongs to the tab that made it, and a save clears it. Not an unpublished entry — an entry nobody can read is private, which is a matter of visibility, not of being a draft.
 _Avoid_: Draft, autosave, working copy
 
+**Preview**:
+The rendered view of one section, beside the textarea that holds it. It shows the section's heading and body as a reader gets them, from the same renderer the read page calls. A preview is an enhancement the browser adds after it loads: the author switches it off, and it is never there without JavaScript. It is never the stored value either — a save posts the markdown in the field, and nothing in a preview reaches the database. The code calls the element it renders into a pane.
+_Avoid_: Render, WYSIWYG, live view
+
 **Form identity**:
 The identity a section carries while the editor holds it. The form mints one for a section that arrives without it, sends it back as the hidden field `section-uid`, and keys the section on it. It never reaches the database, and a save ignores it. Not a slug: a slug is stored, the author edits it, and a new section has none. The code calls it a uid.
 _Avoid_: Key, temporary id, client id
