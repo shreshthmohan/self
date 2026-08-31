@@ -3,7 +3,7 @@ import { Form, useNavigation, useSubmit } from "react-router";
 
 import type { FormEntry } from "../lib/entry-form";
 import { PHASE_1_KINDS } from "../db/vocabulary";
-import { restoreTyped } from "../lib/hydration-guard";
+import { restoreTyped, setValue } from "../lib/hydration-guard";
 import { takeTypedSnapshot } from "../lib/hydration-snapshot";
 
 /**
@@ -64,60 +64,77 @@ export function EntryEditor(props: {
 	const form = useRef<HTMLFormElement>(null);
 
 	/*
-	 * A submit is in flight. Every intent here rebuilds the form from what the
-	 * POST carried, so a second submit sent before the first answer lands
-	 * carries the form as it was and throws the first result away: two quick
-	 * taps on "Add a section" gave one section. React Router runs one
-	 * navigation at a time and does not queue the loser, so the buttons close
-	 * while it is out.
+	 * A submit is in flight.
 	 *
-	 * It is idle on the server and until hydration, so the served HTML carries
-	 * no `disabled` and the no-JS path is untouched (ADR 0002). See #111.
+	 * Every intent rebuilds the form from what the POST carried. So a second
+	 * submit sent before the first answer lands carries the form as it was,
+	 * and the first result is lost: two quick taps on "Add a section" gave one
+	 * section. React Router runs one navigation at a time and does not queue
+	 * the loser, so the buttons close while it is out.
+	 *
+	 * The state is idle on the server and until hydration. The served HTML
+	 * carries no `disabled`, so the no-JS path is untouched (ADR 0002).
 	 */
 	const busy = useNavigation().state !== "idle";
 
 	const submit = useSubmit();
 
 	/*
-	 * The client-side submit, with the fragment dropped.
+	 * The submit, sent from the page, with the fragment dropped.
 	 *
-	 * The fragment on a button's `formAction` is the no-JS aid: it lands the
+	 * The fragment on a button's `formAction` is the no-JS aid. It lands the
 	 * author on the right section after the browser has thrown the page away.
-	 * Here the page stays, so the fragment is not wanted — and it is not
-	 * harmless either. React Router scrolls to a hash target BEFORE it reads
-	 * `preventScrollReset`, so leaving it on would jump the author exactly as
-	 * the reload did.
+	 * Here the page stays, so the fragment is not wanted. It is not harmless
+	 * either: React Router scrolls to a hash target BEFORE it reads
+	 * `preventScrollReset`, so a fragment left on would jump the author
+	 * exactly as the reload did.
 	 *
-	 * So this posts to `props.action` alone. `preventDefault` is what tells
-	 * `<Form>` to stand aside; it does not stop the submit, it moves it.
-	 * Browser validation has already run by the time this fires, so
-	 * `formNoValidate` still means what it says.
+	 * This posts to `props.action` alone. `preventDefault` tells `<Form>` to
+	 * stand aside; it does not stop the submit, it moves it. Browser
+	 * validation has already run when this fires, so `formNoValidate` still
+	 * means what it says.
 	 */
-	function submitWithoutFragment(event: FormEvent<HTMLFormElement>) {
+	function submitFromPage(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		const element = event.currentTarget;
 		// Every submitter in this form is a `<button type="submit">`.
 		const submitter = (event.nativeEvent as SubmitEvent)
 			.submitter as HTMLButtonElement | null;
 
-		// Built here rather than left to `<Form>`, so the fields are read
-		// before the line below empties one of them.
-		void submit(new FormData(element, submitter), {
+		/*
+		 * The offset is held for every intent that hands the editor back.
+		 * `save` is the one that does not: it answers with the entry's own
+		 * page, and a page opens at its top.
+		 */
+		const posted = submit(new FormData(element, submitter), {
 			method: "post",
 			action: props.action,
-			preventScrollReset: true,
+			preventScrollReset: submitter?.value !== "save",
 		});
 
-		/*
-		 * The paste box is an input to the split and nothing else (#98), so a
-		 * second split must not append the same prose twice. The server never
-		 * echoes this field, and a reload emptied it. The page stays now, so
-		 * emptying it is this side's job.
-		 */
-		if (submitter?.value === "split-sections") {
-			const paste = element.elements.namedItem("raw-markdown");
-			if (paste instanceof HTMLTextAreaElement) paste.value = "";
-		}
+		void posted.then(() => {
+			/*
+			 * The paste box is an input to the split and nothing else (#98).
+			 * A second split must not append the same prose twice. The server
+			 * never echoes the field and the reload used to empty it, so
+			 * emptying it is this side's job now. It waits for the answer: a
+			 * split that never lands leaves the author their prose.
+			 */
+			if (submitter?.value === "split-sections") {
+				const paste = element.elements.namedItem("raw-markdown");
+				if (paste instanceof HTMLTextAreaElement) setValue(paste, "");
+			}
+
+			/*
+			 * The button closed under the pointer while the answer was out,
+			 * and a disabled button drops focus to the body. Take it back —
+			 * unless the answer placed focus itself. A new section autofocuses
+			 * its heading, and that wins.
+			 */
+			if (submitter?.isConnected && document.activeElement === document.body) {
+				submitter.focus();
+			}
+		});
 	}
 
 	/*
@@ -136,7 +153,7 @@ export function EntryEditor(props: {
 			ref={form}
 			method="post"
 			action={props.action}
-			onSubmit={submitWithoutFragment}
+			onSubmit={submitFromPage}
 			className="mt-8 space-y-8"
 		>
 			<input type="hidden" name="version" value={version} />

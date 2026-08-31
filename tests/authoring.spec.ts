@@ -222,6 +222,7 @@ test("removing a section holds the scroll and the pairing", async ({
 	const remove = page.getByRole("button", { name: "Remove this section" });
 	await remove.nth(1).scrollIntoViewIfNeeded();
 	const marker = await page.getByLabel(SECTION_HEADINGS).nth(3).boundingBox();
+	expect(marker).not.toBeNull();
 
 	await remove.nth(1).click();
 	await expect(page.getByLabel(SECTION_HEADINGS)).toHaveCount(3);
@@ -233,13 +234,51 @@ test("removing a section holds the scroll and the pairing", async ({
 		"Under the third.",
 	);
 
-	// Scriptless reloads the document and lands on the fragment, which is the
-	// right answer there. The rest of this test is the scripted one.
+	// The scriptless project reloads the document and lands on the fragment.
+	// That is the right answer there. The rest of this test is the scripted
+	// project's.
 	if (testInfo.project.use.javaScriptEnabled === false) return;
 
 	// No document navigation, so the author is looking at what they were.
 	// `Fourth` is now the third heading; it has not moved on the screen.
 	await expect
-		.poll(async () => (await page.getByLabel(SECTION_HEADINGS).nth(2).boundingBox())?.y)
-		.toBeCloseTo(marker?.y ?? -1, 0);
+		.poll(async () =>
+			(await page.getByLabel(SECTION_HEADINGS).nth(2).boundingBox())?.y,
+		)
+		.toBeCloseTo(marker!.y, 0);
+});
+
+test("a save leaves the editor and opens the entry at the top", async ({
+	page,
+}, testInfo) => {
+	// The other half of the rule. Holding the offset is right for an intent
+	// that hands the editor back; `save` hands over a different page, and a
+	// page opens at its top. See #111.
+	const path = `e2e-top-${testInfo.project.name}`;
+
+	await page.setViewportSize({ width: 390, height: 640 });
+	await page.goto("/a/new");
+	await waitForHydration(page);
+	await page.getByLabel("Title").fill("An entry saved from mid-page");
+	await page.getByLabel("Path").fill(path);
+
+	for (let i = 0; i < 3; i++) {
+		await page.getByRole("button", { name: "Add a section" }).click();
+	}
+	await expect(page.getByLabel(SECTION_HEADINGS)).toHaveCount(4);
+	await waitForHydration(page);
+	for (const [index, heading] of ["First", "Second", "Third", "Fourth"].entries()) {
+		await page.getByLabel(SECTION_HEADINGS).nth(index).fill(heading);
+		await page
+			.getByLabel("Body (markdown)")
+			.nth(index)
+			.fill(`Under the ${heading.toLowerCase()}.`);
+	}
+
+	await page.getByLabel("Body (markdown)").nth(3).scrollIntoViewIfNeeded();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
+	await expect(page).toHaveURL(`/${path}`);
+
+	if (testInfo.project.use.javaScriptEnabled === false) return;
+	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });

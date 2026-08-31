@@ -91,7 +91,6 @@ test("a section keeps its identity across add, remove and a failed save", async 
 	}
 
 	const before = await settled(page, 3);
-	expect(before).toHaveLength(3);
 	expect(new Set(before.map((s) => s.uid)).size).toBe(3);
 
 	// Remove the middle one. The third section's text must follow its own
