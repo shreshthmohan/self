@@ -43,8 +43,9 @@ test("the owner pastes markdown, splits it into sections, and saves", async ({
 	await page.getByRole("button", { name: "Split into sections" }).click();
 
 	// The split writes nothing. It re-renders the form, and the leading `#`
-	// fills the title the owner left empty.
-	await expect(page).toHaveURL("/a/new");
+	// fills the title the owner left empty. The URL fragment is the button's.
+	// It lands the owner on the sections it just cut (#108).
+	await expect(page).toHaveURL("/a/new#sections");
 	await expect(page.getByLabel("Title")).toHaveValue("Pasted entry");
 
 	// Three, not four. The fresh form's one untouched section was REPLACED, not
@@ -67,7 +68,7 @@ test("the owner pastes markdown, splits it into sections, and saves", async ({
 	// Every field is still the owner's to edit before the save.
 	await waitForHydration(page);
 	await page.getByLabel("Path").fill(path);
-	await page.getByRole("button", { name: "Create" }).click();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
 
 	await expect(page).toHaveURL(`/${path}`);
 	await expect(
