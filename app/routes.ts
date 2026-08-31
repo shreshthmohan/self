@@ -20,5 +20,6 @@ export default [
 	route("logout", "routes/logout.tsx"),
 	route("a/new", "routes/entry-new.tsx"),
 	route("a/:id/edit", "routes/entry-edit.tsx"),
+	route("a/:id/delete", "routes/entry-delete.tsx"),
 	route(":slug", "routes/entry.tsx"),
 ] satisfies RouteConfig;

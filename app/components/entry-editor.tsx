@@ -78,6 +78,20 @@ export function EntryEditor(props: {
 	const form = useRef<HTMLFormElement>(null);
 
 	/*
+	 * Where this form posts.
+	 *
+	 * Normally `props.action` — the route that owns the entry. Once the entry
+	 * is gone, the same form posts to the CREATE path instead, and the primary
+	 * button reads **Recreate as a new entry**. The create path already holds
+	 * the whole rule: `freePathSlug` takes the old word back when nothing has
+	 * claimed it and appends a suffix when something has. See ADR 0017.
+	 *
+	 * Recreating at the old id was refused. That would quietly undo a
+	 * deliberate delete; this makes a new entry out of the text in the tab.
+	 */
+	const action = props.deleted ? "/a/new" : props.action;
+
+	/*
 	 * The preview, and whether the author wants it.
 	 *
 	 * `null` until the effect runs, which is the state the SERVER renders and
@@ -146,10 +160,10 @@ export function EntryEditor(props: {
 	 * `preventScrollReset`, so a fragment left on would jump the author
 	 * exactly as the reload did.
 	 *
-	 * This posts to `props.action` alone. `preventDefault` tells `<Form>` to
-	 * stand aside; it does not stop the submit, it moves it. Browser
-	 * validation has already run when this fires, so `formNoValidate` still
-	 * means what it says.
+	 * This posts to `action` alone, which is the create path once the entry is
+	 * gone. `preventDefault` tells `<Form>` to stand aside; it does not stop
+	 * the submit, it moves it. Browser validation has already run when this
+	 * fires, so `formNoValidate` still means what it says.
 	 */
 	function submitFromPage(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -165,7 +179,7 @@ export function EntryEditor(props: {
 		 */
 		const posted = submit(new FormData(element, submitter), {
 			method: "post",
-			action: props.action,
+			action,
 			preventScrollReset: submitter?.value !== "save",
 		});
 
@@ -209,7 +223,7 @@ export function EntryEditor(props: {
 		<Form
 			ref={form}
 			method="post"
-			action={props.action}
+			action={action}
 			onSubmit={submitFromPage}
 			className="mt-8 space-y-8"
 		>
@@ -217,8 +231,11 @@ export function EntryEditor(props: {
 
 			{props.deleted && (
 				<p className="border border-red-500 p-3 text-sm">
-					This entry was deleted while this page was open. Saving it now
-					recreates it as a new entry, on a new path.
+					There is no entry at this address any more. Nothing on this page
+					is saved, and every word of it is still here.{" "}
+					<strong>Recreate as a new entry</strong> saves what is here as a
+					new entry, which takes the old path back when nothing else has
+					claimed it.
 				</p>
 			)}
 
@@ -376,7 +393,7 @@ export function EntryEditor(props: {
 							disabled={busy}
 							name="intent"
 							value="split-sections"
-							formAction={`${props.action}#sections`}
+							formAction={`${action}#sections`}
 							className="border border-border px-3 py-1 text-sm disabled:opacity-50"
 						>
 							Split into sections
@@ -503,7 +520,7 @@ export function EntryEditor(props: {
 							disabled={busy}
 							name="intent"
 							value={`remove-section:${index}`}
-							formAction={`${props.action}#${
+							formAction={`${action}#${
 								index === 0 ? "sections" : `section-${index - 1}`
 							}`}
 							className="border border-border px-3 py-1 text-sm disabled:opacity-50"
@@ -554,22 +571,32 @@ export function EntryEditor(props: {
 					value="save"
 					className="border border-fg bg-fg px-4 py-2 text-bg disabled:opacity-50"
 				>
-					{props.conflict ? "Save anyway" : props.submitLabel}
+					{props.deleted
+						? "Recreate as a new entry"
+						: props.conflict
+							? "Save anyway"
+							: props.submitLabel}
 				</button>
 				{/*
 					The same write, a different answer: the editor comes back
 					instead of the entry. A long entry is saved often, and each
 					save should not cost the author the trip back. See #108.
+
+					It goes when the entry is gone. There is one thing left to do
+					with this text, and two buttons for it would only ask the
+					author which kind of recreate they meant.
 				*/}
-				<button
-					type="submit"
-					disabled={busy}
-					name="intent"
-					value="save-and-stay"
-					className="border border-border px-4 py-2 disabled:opacity-50"
-				>
-					{props.continueLabel}
-				</button>
+				{!props.deleted && (
+					<button
+						type="submit"
+						disabled={busy}
+						name="intent"
+						value="save-and-stay"
+						className="border border-border px-4 py-2 disabled:opacity-50"
+					>
+						{props.continueLabel}
+					</button>
+				)}
 				<a className="underline" href="/">
 					Cancel
 				</a>

@@ -6,12 +6,11 @@ import { EntryEditor } from "../components/entry-editor";
 import { db } from "../lib/db.server";
 import { createEntry } from "../lib/entries";
 import {
-	blankSection,
+	blankEntry,
 	dropUntouchedSections,
 	intentWrites,
 	parseEntryForm,
 	validateEntry,
-	type FormEntry,
 } from "../lib/entry-form";
 import { requireOwner } from "../lib/viewer";
 
@@ -19,22 +18,9 @@ export function meta() {
 	return [{ title: "New entry — shreshth.dev" }];
 }
 
-/**
- * A fresh form. A function, not a constant: its one section carries a uid
- * (#110), and a module-level constant would hand the same one to every new
- * entry the Worker ever renders.
- */
-const empty = (): FormEntry => ({
-	title: "",
-	kind: "decision",
-	isPublic: false,
-	pathSlug: "",
-	sections: [blankSection(0)],
-});
-
 export async function loader({ request }: Route.LoaderArgs) {
 	await requireOwner(request);
-	return { value: empty() };
+	return { value: blankEntry() };
 }
 
 /**

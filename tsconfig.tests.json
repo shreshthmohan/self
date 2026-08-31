@@ -13,6 +13,7 @@
 		 * import and this fails loudly, which is the intent.
 		 */
 		"app/lib/cookie.ts",
+		"app/lib/entry-markdown.ts",
 		"app/lib/fidelity-gate.ts",
 		"app/lib/markdown.ts",
 		"app/lib/markdown-split.ts",

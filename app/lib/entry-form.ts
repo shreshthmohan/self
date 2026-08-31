@@ -74,6 +74,21 @@ function readLevel(raw: string): Level {
 	return (LEVELS as readonly string[]).includes(raw) ? (raw as Level) : "inherit";
 }
 
+/**
+ * A fresh form. A function, not a constant: its one section carries a uid
+ * (#110), and a module-level constant would hand the same one to every new
+ * entry the Worker ever renders.
+ */
+export function blankEntry(): FormEntry {
+	return {
+		title: "",
+		kind: "decision",
+		isPublic: false,
+		pathSlug: "",
+		sections: [blankSection(0)],
+	};
+}
+
 export function blankSection(position: number): FormSection {
 	return { slug: "", heading: "", body: "", position, level: "inherit", uid: newUid() };
 }
