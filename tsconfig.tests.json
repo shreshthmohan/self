@@ -12,9 +12,11 @@
 		 * which files are allowed to be pure. Give `markdown.ts` a server-side
 		 * import and this fails loudly, which is the intent.
 		 */
+		"app/lib/cookie.ts",
 		"app/lib/fidelity-gate.ts",
 		"app/lib/markdown.ts",
 		"app/lib/markdown-split.ts",
+		"app/lib/preview.ts",
 		"app/lib/slug.ts",
 		"app/db/vocabulary.ts"
 	],
