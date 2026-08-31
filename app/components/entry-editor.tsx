@@ -1,10 +1,20 @@
-import { type FormEvent, useLayoutEffect, useRef } from "react";
+import {
+	createRef,
+	type FormEvent,
+	type RefObject,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { Form, useNavigation, useSubmit } from "react-router";
 
 import type { FormEntry } from "../lib/entry-form";
 import { PHASE_1_KINDS } from "../db/vocabulary";
 import { restoreTyped, setValue } from "../lib/hydration-guard";
 import { takeTypedSnapshot } from "../lib/hydration-snapshot";
+import { previewFromCookie, rememberPreview } from "../lib/preview";
+import { SectionPreview } from "./section-preview";
 
 /**
  * The editor. A real `<form>` with a named `<textarea>` per section body, so
@@ -36,6 +46,10 @@ import { takeTypedSnapshot } from "../lib/hydration-snapshot";
  * Typing in the hydration gap costs the author nothing either: the client
  * entry snapshots the typed fields before React runs, and the layout effect
  * below puts them back (ADR 0016).
+ *
+ * Each section body gets a preview beside it once the runtime lands (#103).
+ * The served HTML is the form as it is without one, and a toggle the author
+ * owns takes every pane away again.
  */
 export function EntryEditor(props: {
 	value: FormEntry;
@@ -78,6 +92,49 @@ export function EntryEditor(props: {
 	const action = props.deleted ? "/a/new" : props.action;
 
 	/*
+	 * The preview, and whether the author wants it.
+	 *
+	 * `null` until the effect runs, which is the state the SERVER renders and
+	 * the state the first client render repeats. So the markup hydrates as it
+	 * was served — no pane, no toggle — and the enhancement arrives on the
+	 * render after mount (ADR 0002).
+	 *
+	 * The preference is the browser's own, read from the cookie here and
+	 * written by the toggle. No loader carries it and no revalidation follows
+	 * it, exactly as the theme of ADR 0015 works.
+	 */
+	const [preview, setPreview] = useState<boolean | null>(null);
+	useEffect(() => setPreview(previewFromCookie()), []);
+
+	/*
+	 * A heading input and a body textarea per section, kept across renders and
+	 * keyed on the form identity the section already carries (#110). The pane
+	 * reads its two fields through these and writes neither, so the fields
+	 * stay uncontrolled and ADR 0016 is untouched.
+	 */
+	const fields = useRef(new Map<string, SectionFields>());
+	function fieldsFor(uid: string): SectionFields {
+		const held = fields.current.get(uid);
+		if (held) return held;
+
+		const made = {
+			heading: createRef<HTMLInputElement>(),
+			body: createRef<HTMLTextAreaElement>(),
+		};
+		fields.current.set(uid, made);
+		return made;
+	}
+
+	// A removed section leaves its pair behind. Drop it, so the map holds the
+	// sections on the page and no more.
+	useEffect(() => {
+		const live = new Set(value.sections.map((s) => s.uid));
+		for (const uid of fields.current.keys()) {
+			if (!live.has(uid)) fields.current.delete(uid);
+		}
+	});
+
+	/*
 	 * A submit is in flight.
 	 *
 	 * Every intent rebuilds the form from what the POST carried. So a second
@@ -103,10 +160,10 @@ export function EntryEditor(props: {
 	 * `preventScrollReset`, so a fragment left on would jump the author
 	 * exactly as the reload did.
 	 *
-	 * This posts to `props.action` alone. `preventDefault` tells `<Form>` to
-	 * stand aside; it does not stop the submit, it moves it. Browser
-	 * validation has already run when this fires, so `formNoValidate` still
-	 * means what it says.
+	 * This posts to `action` alone, which is the create path once the entry is
+	 * gone. `preventDefault` tells `<Form>` to stand aside; it does not stop
+	 * the submit, it moves it. Browser validation has already run when this
+	 * fires, so `formNoValidate` still means what it says.
 	 */
 	function submitFromPage(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -259,7 +316,34 @@ export function EntryEditor(props: {
 			</div>
 
 			<div id="sections" className="space-y-6">
-				<h2 className="text-xl">Sections</h2>
+				<div className="flex items-center justify-between gap-3">
+					<h2 className="text-xl">Sections</h2>
+
+					{/*
+						One switch for every pane. It renders after mount, so a page
+						with no runtime holds no dead control, and it carries no
+						`name`: the choice is a cookie, never a form field.
+
+						The slot holds its size whether the switch is in it or not,
+						so the heading beside it does not move when the runtime
+						lands. ADR 0015 reserves the same space for the theme.
+					*/}
+					<span className="inline-flex h-6 w-24 items-center justify-end">
+						{preview !== null && (
+							<label className="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									checked={preview}
+									onChange={(event) => {
+										setPreview(event.target.checked);
+										rememberPreview(event.target.checked);
+									}}
+								/>
+								<span>Preview</span>
+							</label>
+						)}
+					</span>
+				</div>
 
 				{/*
 					Paste prose written elsewhere and let the server cut it into
@@ -328,7 +412,10 @@ export function EntryEditor(props: {
 					section shifts the rest one caption up. The uid makes React
 					unmount the fieldset that left. See #110.
 				*/}
-				{value.sections.map((s, index) => (
+				{value.sections.map((s, index) => {
+					const section = fieldsFor(s.uid);
+
+					return (
 					<fieldset
 						key={s.uid}
 						// The fragment the remove and split buttons aim at (#108).
@@ -359,6 +446,7 @@ export function EntryEditor(props: {
 							    See #69. */}
 							<span className="text-sm font-medium">Heading (optional)</span>
 							<input
+								ref={section.heading}
 								name={`section-heading-${index}`}
 								defaultValue={s.heading}
 								autoFocus={
@@ -394,15 +482,32 @@ export function EntryEditor(props: {
 							</label>
 						</div>
 
-						<label className="block">
-							<span className="text-sm font-medium">Body (markdown)</span>
-							<textarea
-								name={`section-body-${index}`}
-								defaultValue={s.body}
-								rows={12}
-								className="mt-1 w-full border border-border bg-bg p-2 font-mono text-sm"
-							/>
-						</label>
+						{/*
+							The wrapper is here whether the preview is on or not. It
+							only changes class, so the pane arrives beside a textarea
+							the runtime never unmounts — a remount would throw away
+							the caret and anything typed in the hydration gap.
+						*/}
+						<div className={preview ? "grid gap-3 md:grid-cols-2" : undefined}>
+							<label className="block">
+								<span className="text-sm font-medium">Body (markdown)</span>
+								<textarea
+									ref={section.body}
+									name={`section-body-${index}`}
+									defaultValue={s.body}
+									rows={12}
+									className="mt-1 w-full border border-border bg-bg p-2 font-mono text-sm"
+								/>
+							</label>
+
+							{preview && (
+								<SectionPreview
+									label={`Preview of section ${index + 1}`}
+									heading={section.heading}
+									body={section.body}
+								/>
+							)}
+						</div>
 
 						{/*
 							The URL fragment lands the author on the section above
@@ -423,7 +528,8 @@ export function EntryEditor(props: {
 							Remove this section
 						</button>
 					</fieldset>
-				))}
+					);
+				})}
 
 				{/*
 					No URL fragment here. The new section's heading is autofocused
@@ -498,3 +604,9 @@ export function EntryEditor(props: {
 		</Form>
 	);
 }
+
+/** The two fields a section's pane reads. */
+type SectionFields = {
+	heading: RefObject<HTMLInputElement | null>;
+	body: RefObject<HTMLTextAreaElement | null>;
+};
