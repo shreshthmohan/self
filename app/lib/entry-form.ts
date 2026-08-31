@@ -10,7 +10,33 @@ import { splitMarkdown } from "./markdown-split";
  * Field names are flat and indexed rather than nested, because `FormData` has
  * no nesting. One repeated hidden `section-index` carries the set of live
  * indexes, so a removed section leaves no gap to reason about.
+ *
+ * An index says where a section stands, never which section it is. So each one
+ * also carries a `section-uid-<index>`, minted here for a section that arrives
+ * without one, which the editor renders as a hidden field and keys its
+ * fieldsets on (#110). It is a form-lifetime identity, like `section-index`: a
+ * save ignores it and nothing stores it. The slug cannot do this job — it is
+ * empty on a new section, the author edits it, and two blank ones collide.
  */
+
+/** A section as the form holds it: the stored shape plus its form identity. */
+export type FormSection = SectionInput & { uid: string };
+
+/** An entry as the form holds it. `EntryInput` once the uids are dropped. */
+export type FormEntry = Omit<EntryInput, "sections"> & {
+	sections: FormSection[];
+};
+
+/**
+ * A fresh identity. It never leaves the form, so it needs to be unique among
+ * one form's sections and nothing more.
+ */
+const newUid = () => crypto.randomUUID();
+
+/** Give stored sections the identity the form needs, for a first render. */
+export function toFormSections(sections: SectionInput[]): FormSection[] {
+	return sections.map((s) => ({ ...s, uid: newUid() }));
+}
 
 export type Intent =
 	| { kind: "save" }
@@ -21,7 +47,7 @@ export type Intent =
 export type ParsedEntryForm = {
 	intent: Intent;
 	version: number;
-	input: EntryInput;
+	input: FormEntry;
 };
 
 function readIntent(formData: FormData): Intent {
@@ -41,8 +67,8 @@ function readLevel(raw: string): Level {
 	return (LEVELS as readonly string[]).includes(raw) ? (raw as Level) : "inherit";
 }
 
-export function blankSection(position: number): SectionInput {
-	return { slug: "", heading: "", body: "", position, level: "inherit" };
+export function blankSection(position: number): FormSection {
+	return { slug: "", heading: "", body: "", position, level: "inherit", uid: newUid() };
 }
 
 /**
@@ -70,7 +96,11 @@ export function parseEntryForm(formData: FormData): ParsedEntryForm {
 		.map((v) => Number(String(v)))
 		.filter((n) => Number.isInteger(n));
 
-	let sections: SectionInput[] = indexes.map((index, order) => ({
+	let sections: FormSection[] = indexes.map((index, order) => ({
+		// The identity the form is carrying, or a new one for a section that
+		// arrives without it — a form rendered before #110, or one a script
+		// built by hand.
+		uid: String(formData.get(`section-uid-${index}`) ?? "").trim() || newUid(),
 		slug: String(formData.get(`section-slug-${index}`) ?? "").trim(),
 		heading: String(formData.get(`section-heading-${index}`) ?? "").trim(),
 		body: String(formData.get(`section-body-${index}`) ?? ""),
@@ -105,7 +135,11 @@ export function parseEntryForm(formData: FormData): ParsedEntryForm {
 			const after = keep.reduce((max, s) => Math.max(max, s.position), -1) + 1;
 			sections = [
 				...keep,
-				...split.sections.map((s, i) => ({ ...s, position: after + i })),
+				...split.sections.map((s, i) => ({
+					...s,
+					position: after + i,
+					uid: newUid(),
+				})),
 			];
 		}
 	}

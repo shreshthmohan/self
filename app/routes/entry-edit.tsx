@@ -4,8 +4,13 @@ import type { Route } from "./+types/entry-edit";
 
 import { EntryEditor } from "../components/entry-editor";
 import { db } from "../lib/db.server";
-import { loadEntry, saveEntry, type EntryInput } from "../lib/entries";
-import { parseEntryForm, validateEntry } from "../lib/entry-form";
+import { loadEntry, saveEntry } from "../lib/entries";
+import {
+	parseEntryForm,
+	toFormSections,
+	validateEntry,
+	type FormEntry,
+} from "../lib/entry-form";
 import { notFound, requireOwner } from "../lib/viewer";
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -26,12 +31,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const entry = await loadEntry(db(), id, viewer);
 	if (!entry) notFound();
 
-	const value: EntryInput = {
+	const value: FormEntry = {
 		title: entry.title,
 		kind: entry.kind,
 		isPublic: entry.isPublic,
 		pathSlug: entry.slug ?? "",
-		sections: entry.sections,
+		// The stored sections have no form identity yet. One is minted here, on
+		// the way into the first render, and the form carries it from then on.
+		sections: toFormSections(entry.sections),
 	};
 	return { id: entry.id, version: entry.version, value };
 }
