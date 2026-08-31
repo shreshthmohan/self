@@ -126,8 +126,11 @@ function restoreCaret(el: Control, field: FieldSnapshot): void {
  * Write through React's own value setter, not the element's. React 19 tracks
  * the last value it wrote on the node; a plain assignment leaves that tracker
  * stale and the next `input` event is swallowed.
+ *
+ * Exported for any code that writes a field the author owns. The editor
+ * empties the paste box this way (#111).
  */
-function setValue(el: Control, value: string): void {
+export function setValue(el: Control, value: string): void {
 	if (el instanceof HTMLSelectElement) {
 		el.value = value;
 		return;

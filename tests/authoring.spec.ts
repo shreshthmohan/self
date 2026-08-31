@@ -189,3 +189,96 @@ test("a stale version still conflicts after Save and Continue", async ({
 	).toBeVisible();
 	await stale.close();
 });
+
+test("removing a section holds the scroll and the pairing", async ({
+	page,
+}, testInfo) => {
+	// The guard for the client-side submit of #111. With the runtime on the
+	// remove must not move the page under the author; with it off the document
+	// reloads and only the pairing is checked.
+	await page.setViewportSize({ width: 390, height: 640 });
+	await page.goto("/a/new");
+	await waitForHydration(page);
+	await page.getByLabel("Title").fill("An entry removed from mid-page");
+
+	for (let i = 0; i < 3; i++) {
+		await page.getByRole("button", { name: "Add a section" }).click();
+	}
+	await expect(page.getByLabel(SECTION_HEADINGS)).toHaveCount(4);
+
+	const written = ["First", "Second", "Third", "Fourth"];
+	await waitForHydration(page);
+	for (const [index, heading] of written.entries()) {
+		await page.getByLabel(SECTION_HEADINGS).nth(index).fill(heading);
+		await page
+			.getByLabel("Body (markdown)")
+			.nth(index)
+			.fill(`Under the ${heading.toLowerCase()}.`);
+	}
+
+	// Somewhere down the page, with the second section's remove button in
+	// view. The fourth heading is the marker: it sits below the removal, so a
+	// page that holds still keeps it where it is.
+	const remove = page.getByRole("button", { name: "Remove this section" });
+	await remove.nth(1).scrollIntoViewIfNeeded();
+	const marker = await page.getByLabel(SECTION_HEADINGS).nth(3).boundingBox();
+	expect(marker).not.toBeNull();
+
+	await remove.nth(1).click();
+	await expect(page.getByLabel(SECTION_HEADINGS)).toHaveCount(3);
+
+	// The third section's text follows its own caption rather than sliding up
+	// under the second's (#110).
+	await expect(page.getByLabel(SECTION_HEADINGS).nth(1)).toHaveValue("Third");
+	await expect(page.getByLabel("Body (markdown)").nth(1)).toHaveValue(
+		"Under the third.",
+	);
+
+	// The scriptless project reloads the document and lands on the fragment.
+	// That is the right answer there. The rest of this test is the scripted
+	// project's.
+	if (testInfo.project.use.javaScriptEnabled === false) return;
+
+	// No document navigation, so the author is looking at what they were.
+	// `Fourth` is now the third heading; it has not moved on the screen.
+	await expect
+		.poll(async () =>
+			(await page.getByLabel(SECTION_HEADINGS).nth(2).boundingBox())?.y,
+		)
+		.toBeCloseTo(marker!.y, 0);
+});
+
+test("a save leaves the editor and opens the entry at the top", async ({
+	page,
+}, testInfo) => {
+	// The other half of the rule. Holding the offset is right for an intent
+	// that hands the editor back; `save` hands over a different page, and a
+	// page opens at its top. See #111.
+	const path = `e2e-top-${testInfo.project.name}`;
+
+	await page.setViewportSize({ width: 390, height: 640 });
+	await page.goto("/a/new");
+	await waitForHydration(page);
+	await page.getByLabel("Title").fill("An entry saved from mid-page");
+	await page.getByLabel("Path").fill(path);
+
+	for (let i = 0; i < 3; i++) {
+		await page.getByRole("button", { name: "Add a section" }).click();
+	}
+	await expect(page.getByLabel(SECTION_HEADINGS)).toHaveCount(4);
+	await waitForHydration(page);
+	for (const [index, heading] of ["First", "Second", "Third", "Fourth"].entries()) {
+		await page.getByLabel(SECTION_HEADINGS).nth(index).fill(heading);
+		await page
+			.getByLabel("Body (markdown)")
+			.nth(index)
+			.fill(`Under the ${heading.toLowerCase()}.`);
+	}
+
+	await page.getByLabel("Body (markdown)").nth(3).scrollIntoViewIfNeeded();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
+	await expect(page).toHaveURL(`/${path}`);
+
+	if (testInfo.project.use.javaScriptEnabled === false) return;
+	await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});
