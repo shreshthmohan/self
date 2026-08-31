@@ -18,7 +18,7 @@ test("the owner saves a new entry and then edits it", async ({
 
 	await page.goto("/a/new");
 	await fillEntry(page, entry);
-	await page.getByRole("button", { name: "Create" }).click();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
 	await expectEntryPage(page, entry);
 
 	// The whole entry posts again, guarded by its version (ADR 0011).

@@ -26,7 +26,7 @@ function longTitle(project: string, nth: string): string {
 async function create(page: Page, entry: EntryFixture): Promise<void> {
 	await page.goto("/a/new");
 	await fillEntry(page, entry);
-	await page.getByRole("button", { name: "Create" }).click();
+	await page.getByRole("button", { name: "Create", exact: true }).click();
 }
 
 test("a long title saves, and a second one takes a suffix", async ({

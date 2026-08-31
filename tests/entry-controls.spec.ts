@@ -2,9 +2,9 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 
 /** Both controls, whole, inside the window. */
 async function expectControlsOnScreen(page: Page): Promise<void> {
-	await expect(page.getByRole("button", { name: "Create" })).toBeInViewport({
-		ratio: 1,
-	});
+	await expect(
+		page.getByRole("button", { name: "Create", exact: true }),
+	).toBeInViewport({ ratio: 1 });
 	await expect(page.getByRole("link", { name: "Cancel" })).toBeInViewport({
 		ratio: 1,
 	});
@@ -37,7 +37,9 @@ test("the editor controls stay on screen while the form scrolls", async ({
 	const formBox = await form.boundingBox();
 	expect(formBox?.height ?? 0).toBeGreaterThan(height);
 
-	const row = page.getByRole("button", { name: "Create" }).locator("..");
+	const row = page
+		.getByRole("button", { name: "Create", exact: true })
+		.locator("..");
 
 	// At the top of the form, with the rest of it below the fold.
 	await expectControlsOnScreen(page);

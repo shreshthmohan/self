@@ -4,8 +4,18 @@ import type { Route } from "./+types/entry-edit";
 
 import { EntryEditor } from "../components/entry-editor";
 import { db } from "../lib/db.server";
-import { loadEntry, saveEntry, type EntryInput } from "../lib/entries";
-import { parseEntryForm, validateEntry } from "../lib/entry-form";
+import {
+	loadEntry,
+	saveEntry,
+	type EntryInput,
+	type LoadedEntry,
+} from "../lib/entries";
+import {
+	dropUntouchedSections,
+	intentWrites,
+	parseEntryForm,
+	validateEntry,
+} from "../lib/entry-form";
 import { notFound, requireOwner } from "../lib/viewer";
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -26,14 +36,18 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const entry = await loadEntry(db(), id, viewer);
 	if (!entry) notFound();
 
-	const value: EntryInput = {
+	return { id: entry.id, version: entry.version, value: toInput(entry) };
+}
+
+/** A stored entry, as the editor's fields hold it. */
+function toInput(entry: LoadedEntry): EntryInput {
+	return {
 		title: entry.title,
 		kind: entry.kind,
 		isPublic: entry.isPublic,
 		pathSlug: entry.slug ?? "",
 		sections: entry.sections,
 	};
-	return { id: entry.id, version: entry.version, value };
 }
 
 /**
@@ -46,21 +60,45 @@ export async function loader({ params, request }: Route.LoaderArgs) {
  * enhances a working save rather than making one.
  */
 export async function action({ params, request }: Route.ActionArgs) {
-	await requireOwner(request);
+	const viewer = await requireOwner(request);
 	const id = Number(params.id);
 	if (!Number.isInteger(id)) notFound();
 
 	const { intent, input, version } = parseEntryForm(await request.formData());
 
-	if (intent.kind !== "save") {
-		return { value: input, version, problems: [] as string[] };
+	if (!intentWrites(intent)) {
+		return {
+			value: input,
+			version,
+			problems: [] as string[],
+			addedSection: intent.kind === "add-section",
+		};
 	}
 
-	const problems = validateEntry(input);
+	// The write drops what the author never typed into. `input` keeps it, so a
+	// save that fails returns the form they submitted (#108).
+	const write = dropUntouchedSections(input);
+	const problems = validateEntry(write);
 	if (problems.length > 0) return { value: input, version, problems };
 
-	const result = await saveEntry(db(), id, version, input);
-	if (result.ok) throw redirect(`/${result.slug}`);
+	const result = await saveEntry(db(), id, version, write);
+	if (result.ok) {
+		if (intent.kind === "save") throw redirect(`/${result.slug}`);
+
+		// Save and Continue. The editor comes back holding what the database
+		// now holds, NOT what was submitted. The write generated the anchors
+		// and renumbered the positions, and an echo of the input would leave
+		// those out of the form. The new version comes with it, so the next
+		// save passes the guard instead of reading as a conflict.
+		const saved = await loadEntry(db(), id, viewer);
+		if (!saved) notFound();
+		return {
+			value: toInput(saved),
+			version: saved.version,
+			problems: [] as string[],
+			saved: true,
+		};
+	}
 
 	const failure = result.failure;
 	switch (failure.kind) {
@@ -104,9 +142,12 @@ export default function EditEntry({
 				value={value}
 				version={version}
 				submitLabel="Save"
+				continueLabel="Save and Continue"
 				problems={actionData?.problems}
 				conflict={actionData?.conflict}
 				deleted={actionData?.deleted}
+				saved={actionData?.saved}
+				addedSection={actionData?.addedSection}
 			/>
 		</main>
 	);
