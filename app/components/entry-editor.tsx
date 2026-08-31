@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+import { type FormEvent, useLayoutEffect, useRef } from "react";
+import { Form, useNavigation, useSubmit } from "react-router";
 
 import type { FormEntry } from "../lib/entry-form";
 import { PHASE_1_KINDS } from "../db/vocabulary";
@@ -15,16 +16,22 @@ import { takeTypedSnapshot } from "../lib/hydration-snapshot";
  * action writes nothing for those and re-renders the form with the submitted
  * text, so a round trip never costs the author their typing.
  *
- * A round trip is a full document navigation, so the browser goes back to the
- * top of the page. Remove and split therefore carry a URL fragment on their
- * `formAction`. It names what the author wants to look at next, and every
- * section fieldset carries the matching id.
+ * With JavaScript off, a round trip is a full document navigation, so the
+ * browser goes back to the top of the page. Remove and split therefore carry a
+ * URL fragment on their `formAction`. It names what the author wants to look
+ * at next, and every section fieldset carries the matching id.
+ *
+ * With JavaScript on, `<Form>` posts from the page instead. It serves the same
+ * element and the same attributes, so the markup below is one form with an
+ * upgrade, not two mechanisms. The author keeps the offset, the caret and the
+ * undo stack on every intent. See #111.
  *
  * Add uses `autofocus` on the new heading instead. The browser scrolls a
  * focused field into view, so the one attribute buys both. A URL fragment here
  * would cancel that focus: a fragment target wins over an autofocus candidate.
  *
- * All of it is plain HTML. It works with JavaScript off. See #108.
+ * The served markup is plain HTML throughout. It works with JavaScript off.
+ * See #108.
  *
  * Typing in the hydration gap costs the author nothing either: the client
  * entry snapshots the typed fields before React runs, and the layout effect
@@ -57,6 +64,63 @@ export function EntryEditor(props: {
 	const form = useRef<HTMLFormElement>(null);
 
 	/*
+	 * A submit is in flight. Every intent here rebuilds the form from what the
+	 * POST carried, so a second submit sent before the first answer lands
+	 * carries the form as it was and throws the first result away: two quick
+	 * taps on "Add a section" gave one section. React Router runs one
+	 * navigation at a time and does not queue the loser, so the buttons close
+	 * while it is out.
+	 *
+	 * It is idle on the server and until hydration, so the served HTML carries
+	 * no `disabled` and the no-JS path is untouched (ADR 0002). See #111.
+	 */
+	const busy = useNavigation().state !== "idle";
+
+	const submit = useSubmit();
+
+	/*
+	 * The client-side submit, with the fragment dropped.
+	 *
+	 * The fragment on a button's `formAction` is the no-JS aid: it lands the
+	 * author on the right section after the browser has thrown the page away.
+	 * Here the page stays, so the fragment is not wanted — and it is not
+	 * harmless either. React Router scrolls to a hash target BEFORE it reads
+	 * `preventScrollReset`, so leaving it on would jump the author exactly as
+	 * the reload did.
+	 *
+	 * So this posts to `props.action` alone. `preventDefault` is what tells
+	 * `<Form>` to stand aside; it does not stop the submit, it moves it.
+	 * Browser validation has already run by the time this fires, so
+	 * `formNoValidate` still means what it says.
+	 */
+	function submitWithoutFragment(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		const element = event.currentTarget;
+		// Every submitter in this form is a `<button type="submit">`.
+		const submitter = (event.nativeEvent as SubmitEvent)
+			.submitter as HTMLButtonElement | null;
+
+		// Built here rather than left to `<Form>`, so the fields are read
+		// before the line below empties one of them.
+		void submit(new FormData(element, submitter), {
+			method: "post",
+			action: props.action,
+			preventScrollReset: true,
+		});
+
+		/*
+		 * The paste box is an input to the split and nothing else (#98), so a
+		 * second split must not append the same prose twice. The server never
+		 * echoes this field, and a reload emptied it. The page stays now, so
+		 * emptying it is this side's job.
+		 */
+		if (submitter?.value === "split-sections") {
+			const paste = element.elements.namedItem("raw-markdown");
+			if (paste instanceof HTMLTextAreaElement) paste.value = "";
+		}
+	}
+
+	/*
 	 * A layout effect, not an effect: it runs before the browser paints, so
 	 * the author never sees the server's text flash back. The snapshot is read
 	 * once and cleared, so this is a no-op on a client-side navigation into
@@ -68,10 +132,11 @@ export function EntryEditor(props: {
 	}, []);
 
 	return (
-		<form
+		<Form
 			ref={form}
 			method="post"
 			action={props.action}
+			onSubmit={submitWithoutFragment}
 			className="mt-8 space-y-8"
 		>
 			<input type="hidden" name="version" value={version} />
@@ -207,10 +272,11 @@ export function EntryEditor(props: {
 						<button
 							type="submit"
 							formNoValidate
+							disabled={busy}
 							name="intent"
 							value="split-sections"
 							formAction={`${props.action}#sections`}
-							className="border border-border px-3 py-1 text-sm"
+							className="border border-border px-3 py-1 text-sm disabled:opacity-50"
 						>
 							Split into sections
 						</button>
@@ -312,12 +378,13 @@ export function EntryEditor(props: {
 						<button
 							type="submit"
 							formNoValidate
+							disabled={busy}
 							name="intent"
 							value={`remove-section:${index}`}
 							formAction={`${props.action}#${
 								index === 0 ? "sections" : `section-${index - 1}`
 							}`}
-							className="border border-border px-3 py-1 text-sm"
+							className="border border-border px-3 py-1 text-sm disabled:opacity-50"
 						>
 							Remove this section
 						</button>
@@ -336,9 +403,10 @@ export function EntryEditor(props: {
 				<button
 					type="submit"
 					formNoValidate
+					disabled={busy}
 					name="intent"
 					value="add-section"
-					className="border border-border px-3 py-1 text-sm"
+					className="border border-border px-3 py-1 text-sm disabled:opacity-50"
 				>
 					Add a section
 				</button>
@@ -358,9 +426,10 @@ export function EntryEditor(props: {
 			<div className="sticky bottom-0 z-10 flex items-center gap-3 border-t border-border bg-bg py-3">
 				<button
 					type="submit"
+					disabled={busy}
 					name="intent"
 					value="save"
-					className="border border-fg bg-fg px-4 py-2 text-bg"
+					className="border border-fg bg-fg px-4 py-2 text-bg disabled:opacity-50"
 				>
 					{props.conflict ? "Save anyway" : props.submitLabel}
 				</button>
@@ -371,9 +440,10 @@ export function EntryEditor(props: {
 				*/}
 				<button
 					type="submit"
+					disabled={busy}
 					name="intent"
 					value="save-and-stay"
-					className="border border-border px-4 py-2"
+					className="border border-border px-4 py-2 disabled:opacity-50"
 				>
 					{props.continueLabel}
 				</button>
@@ -381,6 +451,6 @@ export function EntryEditor(props: {
 					Cancel
 				</a>
 			</div>
-		</form>
+		</Form>
 	);
 }

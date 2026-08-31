@@ -43,9 +43,16 @@ test("the owner pastes markdown, splits it into sections, and saves", async ({
 	await page.getByRole("button", { name: "Split into sections" }).click();
 
 	// The split writes nothing. It re-renders the form, and the leading `#`
-	// fills the title the owner left empty. The URL fragment is the button's.
-	// It lands the owner on the sections it just cut (#108).
-	await expect(page).toHaveURL("/a/new#sections");
+	// fills the title the owner left empty.
+	//
+	// The fragment is the button's, and it is the no-JS aid: it lands the owner
+	// on the sections the reload just cut (#108). The scripted path does not
+	// reload, drops the fragment, and leaves the URL as it was (#111).
+	await expect(page).toHaveURL(
+		testInfo.project.use.javaScriptEnabled === false
+			? "/a/new#sections"
+			: "/a/new",
+	);
 	await expect(page.getByLabel("Title")).toHaveValue("Pasted entry");
 
 	// Three, not four. The fresh form's one untouched section was REPLACED, not

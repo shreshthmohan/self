@@ -7,10 +7,11 @@ import { waitForHydration } from "./hydration";
  *
  * The editor keys its fieldsets on that identity, not on the array index. A
  * full navigation hides the difference: the browser throws the DOM away, so
- * the server's text is the only text. This spec therefore passes on `main`
- * too. It is the guard for the client-side submit of #111. There the
- * fieldsets survive the round trip, and an index key leaves section 3's text
- * under the caption "Section 2".
+ * the server's text is the only text. The client-side submit of #111 is what
+ * makes this spec a guard — the fieldsets now survive the round trip, and an
+ * index key leaves section 3's text under the caption "Section 2". Swap the
+ * key for `index` and the scripted project fails here; the scriptless one,
+ * which still reloads, does not.
  *
  * The load-bearing assertions are the ones on the heading and the body. Those
  * fields are uncontrolled — `defaultValue` — so a surviving DOM node keeps
@@ -32,6 +33,18 @@ const UID_FIELD = "input[name^='section-uid-']";
 /** The section fieldsets. The paste fieldset has no uid and is left out. */
 const sectionFieldsets = (page: Page): Locator =>
 	page.locator("fieldset").filter({ has: page.locator(UID_FIELD) });
+
+/**
+ * Wait for the form to hold `count` sections, then read them.
+ *
+ * A submit is a client-side POST once the runtime is on (#111), so a click
+ * returns before the answer does. Every read below therefore names the count
+ * it expects and waits for it. `toHaveCount` retries; `rendered` does not.
+ */
+async function settled(page: Page, count: number): Promise<Rendered[]> {
+	await expect(sectionFieldsets(page)).toHaveCount(count);
+	return rendered(page);
+}
 
 /**
  * Every section, read one fieldset at a time. The caption, the heading, the
@@ -77,7 +90,7 @@ test("a section keeps its identity across add, remove and a failed save", async 
 		await page.getByLabel("Body (markdown)").nth(index).fill(s.body);
 	}
 
-	const before = await rendered(page);
+	const before = await settled(page, 3);
 	expect(before).toHaveLength(3);
 	expect(new Set(before.map((s) => s.uid)).size).toBe(3);
 
@@ -85,7 +98,7 @@ test("a section keeps its identity across add, remove and a failed save", async 
 	// caption, not slide up under the second's.
 	await page.getByRole("button", { name: "Remove this section" }).nth(1).click();
 
-	expect(await rendered(page)).toEqual([
+	expect(await settled(page, 2)).toEqual([
 		{ caption: "Section 1", heading: "First", body: "Under the first.", uid: before[0].uid },
 		{ caption: "Section 2", heading: "Third", body: "Under the third.", uid: before[2].uid },
 	]);
@@ -94,7 +107,7 @@ test("a section keeps its identity across add, remove and a failed save", async 
 	// (#108). Every uid comes back with it, and each one is still on the
 	// section that had it.
 	await page.getByRole("button", { name: "Add a section" }).click();
-	const withBlank = await rendered(page);
+	const withBlank = await settled(page, 3);
 	expect(withBlank.map((s) => s.uid).slice(0, 2)).toEqual([
 		before[0].uid,
 		before[2].uid,
@@ -118,7 +131,7 @@ test("a split gives every section an identity of its own", async ({ page }) => {
 		.fill("## One\n\nUnder one.\n\n## Two\n\nUnder two.\n");
 	await page.getByRole("button", { name: "Split into sections" }).click();
 
-	const split = (await rendered(page)).map((s) => s.uid);
+	const split = (await settled(page, 2)).map((s) => s.uid);
 	expect(split).toHaveLength(2);
 	expect(new Set(split).size).toBe(2);
 	expect(split.every((uid) => uid !== "")).toBe(true);
@@ -150,7 +163,7 @@ test("a save ignores the uid", async ({ page }, testInfo) => {
 	// text and the stored anchor are the ones that were saved.
 	await page.getByRole("link", { name: "Edit" }).click();
 	await waitForHydration(page);
-	const reopened = await rendered(page);
+	const reopened = await settled(page, 1);
 	expect(reopened).toHaveLength(1);
 	expect(reopened[0].heading).toBe("Kept");
 	expect(reopened[0].body).toBe(body);
