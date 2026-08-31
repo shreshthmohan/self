@@ -13,7 +13,7 @@ import type { FormEntry } from "../lib/entry-form";
 import { PHASE_1_KINDS } from "../db/vocabulary";
 import { restoreTyped, setValue } from "../lib/hydration-guard";
 import { takeTypedSnapshot } from "../lib/hydration-snapshot";
-import { previewPreference, setPreviewPreference } from "../lib/preview";
+import { previewFromCookie, rememberPreview } from "../lib/preview";
 import { SectionPreview } from "./section-preview";
 
 /**
@@ -90,7 +90,7 @@ export function EntryEditor(props: {
 	 * it, exactly as the theme of ADR 0015 works.
 	 */
 	const [preview, setPreview] = useState<boolean | null>(null);
-	useEffect(() => setPreview(previewPreference()), []);
+	useEffect(() => setPreview(previewFromCookie()), []);
 
 	/*
 	 * A heading input and a body textarea per section, kept across renders and
@@ -111,8 +111,8 @@ export function EntryEditor(props: {
 		return made;
 	}
 
-	// A removed section leaves its pair behind. Drop it, so a long session of
-	// adding and removing does not grow the map for ever.
+	// A removed section leaves its pair behind. Drop it, so the map holds the
+	// sections on the page and no more.
 	useEffect(() => {
 		const live = new Set(value.sections.map((s) => s.uid));
 		for (const uid of fields.current.keys()) {
@@ -305,21 +305,27 @@ export function EntryEditor(props: {
 					{/*
 						One switch for every pane. It renders after mount, so a page
 						with no runtime holds no dead control, and it carries no
-						`name`: the preference is a cookie, never a form field.
+						`name`: the choice is a cookie, never a form field.
+
+						The slot holds its size whether the switch is in it or not,
+						so the heading beside it does not move when the runtime
+						lands. ADR 0015 reserves the same space for the theme.
 					*/}
-					{preview !== null && (
-						<label className="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								checked={preview}
-								onChange={(event) => {
-									setPreview(event.target.checked);
-									setPreviewPreference(event.target.checked);
-								}}
-							/>
-							<span>Preview</span>
-						</label>
-					)}
+					<span className="inline-flex h-6 w-24 items-center justify-end">
+						{preview !== null && (
+							<label className="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									checked={preview}
+									onChange={(event) => {
+										setPreview(event.target.checked);
+										rememberPreview(event.target.checked);
+									}}
+								/>
+								<span>Preview</span>
+							</label>
+						)}
+					</span>
 				</div>
 
 				{/*
@@ -389,7 +395,10 @@ export function EntryEditor(props: {
 					section shifts the rest one caption up. The uid makes React
 					unmount the fieldset that left. See #110.
 				*/}
-				{value.sections.map((s, index) => (
+				{value.sections.map((s, index) => {
+					const section = fieldsFor(s.uid);
+
+					return (
 					<fieldset
 						key={s.uid}
 						// The fragment the remove and split buttons aim at (#108).
@@ -420,7 +429,7 @@ export function EntryEditor(props: {
 							    See #69. */}
 							<span className="text-sm font-medium">Heading (optional)</span>
 							<input
-								ref={fieldsFor(s.uid).heading}
+								ref={section.heading}
 								name={`section-heading-${index}`}
 								defaultValue={s.heading}
 								autoFocus={
@@ -466,7 +475,7 @@ export function EntryEditor(props: {
 							<label className="block">
 								<span className="text-sm font-medium">Body (markdown)</span>
 								<textarea
-									ref={fieldsFor(s.uid).body}
+									ref={section.body}
 									name={`section-body-${index}`}
 									defaultValue={s.body}
 									rows={12}
@@ -477,8 +486,8 @@ export function EntryEditor(props: {
 							{preview && (
 								<SectionPreview
 									label={`Preview of section ${index + 1}`}
-									heading={fieldsFor(s.uid).heading}
-									body={fieldsFor(s.uid).body}
+									heading={section.heading}
+									body={section.body}
 								/>
 							)}
 						</div>
@@ -502,7 +511,8 @@ export function EntryEditor(props: {
 							Remove this section
 						</button>
 					</fieldset>
-				))}
+					);
+				})}
 
 				{/*
 					No URL fragment here. The new section's heading is autofocused

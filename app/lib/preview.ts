@@ -3,7 +3,7 @@
  *
  * Two things live here, and both belong to the browser alone.
  *
- * The PREFERENCE. It rides a cookie the browser writes and reads, as ADR 0015
+ * The CHOICE. It rides a cookie the browser writes and reads, as ADR 0015
  * settled for the theme. Nothing on the server reads it: the preview is an
  * enhancement (ADR 0002), so no loader and no route hands it down. Only "off"
  * is ever written — absence of the cookie means on.
@@ -15,37 +15,21 @@
  * fetch and one module.
  */
 
+import { readCookie, writeCookie } from "./cookie";
+
 export const PREVIEW_COOKIE = "preview";
-
-/** One year, as the theme cookie holds. A device preference has no session. */
-const MAX_AGE = 60 * 60 * 24 * 365;
-
-/** `Secure` stays on in development: a browser counts localhost as secure. */
-const COOKIE_ATTRIBUTES = "Path=/; SameSite=Lax; Secure";
 
 /**
  * Is the preview on? Only the exact word `off` turns it off, so a hand-edited
  * cookie leaves the author with a working editor and a pane.
- *
- * The value is read raw, for the reason `themeFromRequest` gives:
- * `decodeURIComponent` throws on a malformed escape.
  */
-export function previewPreference(): boolean {
-	for (const pair of document.cookie.split(";")) {
-		const eq = pair.indexOf("=");
-		if (eq === -1) continue;
-		if (pair.slice(0, eq).trim() !== PREVIEW_COOKIE) continue;
-		return pair.slice(eq + 1).trim() !== "off";
-	}
-
-	return true;
+export function previewFromCookie(): boolean {
+	return readCookie(document.cookie, PREVIEW_COOKIE) !== "off";
 }
 
-/** Store the choice. On is the default, so on deletes the cookie. */
-export function setPreviewPreference(on: boolean) {
-	document.cookie = on
-		? `${PREVIEW_COOKIE}=; ${COOKIE_ATTRIBUTES}; Max-Age=0`
-		: `${PREVIEW_COOKIE}=off; ${COOKIE_ATTRIBUTES}; Max-Age=${MAX_AGE}`;
+/** Store the choice. On is the default, so on drops the cookie. */
+export function rememberPreview(on: boolean) {
+	writeCookie(PREVIEW_COOKIE, on ? null : "off");
 }
 
 /**
@@ -57,11 +41,12 @@ export function setPreviewPreference(on: boolean) {
  * buttons aim at. A pane is a view of the text and nothing links into it, so
  * it drops the ids rather than reserving a namespace for them.
  *
- * The renderer emits an id on headings and nowhere else, so this pattern
- * cannot reach any other attribute.
+ * The pattern reads the id ANYWHERE in a heading's open tag, so a second
+ * attribute added to the renderer leaves this working. It reaches no other
+ * element: the renderer emits an id on headings and nowhere else.
  */
 const stripHeadingIds = (html: string) =>
-	html.replace(/(<h[1-6]) id="[^"]*"/g, "$1");
+	html.replace(/(<h[1-6][^>]*?) id="[^"]*"/g, "$1");
 
 export type RenderPreview = (markdown: string) => string;
 
@@ -73,6 +58,13 @@ export function loadPreviewRenderer(): Promise<RenderPreview> {
 		({ renderBody }) =>
 			(markdown: string) =>
 				stripHeadingIds(renderBody(markdown).html),
+		(reason) => {
+			// A rejected promise is held like any other, so a fetch that failed
+			// once would fail for every pane the author opens after it. Drop
+			// it, and the next pane asks again.
+			renderer = null;
+			throw reason;
+		},
 	);
 	return renderer;
 }

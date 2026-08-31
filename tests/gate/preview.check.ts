@@ -21,9 +21,14 @@ import { loadPreviewRenderer } from "../../app/lib/preview";
  */
 test("the pane renders the site's HTML, without the heading ids", async () => {
 	const render = await loadPreviewRenderer();
-	const html = render("## A heading\n\n<script>x</script>\n\nA **bold** word.");
+	const html = render(
+		"# One\n\n## A heading\n\n### Three\n\n<script>x</script>\n\nA **bold** word.",
+	);
 
+	// Every level, because the renderer gives every level an id.
+	expect(html).toContain("<h1>One</h1>");
 	expect(html).toContain("<h2>A heading</h2>");
+	expect(html).toContain("<h3>Three</h3>");
 	expect(html).not.toContain("id=");
 	// The renderer under it is the site's, not marked's default: raw HTML is
 	// escaped. See tests/gate/renderer.check.ts.
@@ -37,11 +42,12 @@ test("the pane renders the site's HTML, without the heading ids", async () => {
  * browser, and it does so by dynamic import, which is worth nothing unless the
  * bundler honours it.
  *
- * So this reads the BUILT manifest rather than the source. It walks what a
- * read page loads — the client entry, the root route and `routes/entry`, with
- * every chunk they statically import — and fails if the renderer is in any of
- * them. A static import added anywhere on that path fails here rather than on
- * a reader's connection.
+ * So this reads the BUILT manifest rather than the source. It walks the
+ * client entry and EVERY route, with every chunk they statically import, and
+ * fails if the renderer is in one. Every route, because a read page is not one
+ * file: the listing and the entry are two, and the editor routes reach the
+ * renderer by dynamic import, which this walk does not follow. A static import
+ * added anywhere fails here rather than on a reader's connection.
  */
 const CLIENT = "build/client";
 const ASSETS = join(CLIENT, "assets");
@@ -49,15 +55,11 @@ const ASSETS = join(CLIENT, "assets");
 /** An error message marked keeps through minification. */
 const MARKED = "markedjs/marked";
 
-test("the renderer is in no chunk a read page loads", () => {
+test("the renderer is in no chunk a page loads", () => {
 	test.skip(!existsSync(ASSETS), "no client build; run `pnpm run build`");
 
 	const manifest = readManifest();
-	const seeds = [
-		manifest.entry,
-		manifest.routes["root"],
-		manifest.routes["routes/entry"],
-	];
+	const seeds = [manifest.entry, ...Object.values(manifest.routes)];
 
 	const loaded = new Set<string>();
 	for (const seed of seeds) {

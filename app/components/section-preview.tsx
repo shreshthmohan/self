@@ -82,16 +82,21 @@ export function SectionPreview(props: {
 				long body nor the first render grows the fieldset the author is
 				typing in.
 
-				Beside the textarea, the box is the height of the grid row, which
-				the textarea column sets: it fills a cell it cannot stretch,
-				because it is taken out of flow. Stacked under the textarea there
-				is no row to fill, so it takes a height of its own, near enough
-				the textarea's twelve rows.
+				Beside the textarea, the box is as tall as the grid row. The
+				textarea column sets that row, and the box fills a cell it cannot
+				stretch, because it is out of flow.
+
+				Stacked under the textarea there is no row to fill. The box takes
+				a height of its own there, near enough the textarea's twelve
+				rows.
 			*/}
 			<div className="mt-1 md:relative md:grow">
 				<div
 					role="region"
 					aria-label={props.label}
+					// The box scrolls, so it takes the keyboard. An author who
+					// reaches it by tab can read a body longer than the box.
+					tabIndex={0}
 					className="h-72 overflow-y-auto border border-border bg-surface p-2 md:absolute md:inset-0 md:h-auto"
 				>
 					{unavailable ? (
