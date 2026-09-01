@@ -17,7 +17,17 @@ import tsconfigPaths from "vite-tsconfig-paths";
  */
 const e2eStateDir = process.env.E2E_STATE_DIR;
 
+/**
+ * `marked` reaches the browser by dynamic import, on the editor only (see
+ * `app/lib/preview.ts`). Vite does not see that import when it scans on start,
+ * so it discovers the dependency the first time an editor page runs, optimizes
+ * it, and RELOADS the page. A reload in the middle of a save loses the click
+ * and leaves the spec on `/a/new`. Naming it here pre-bundles it with the
+ * rest, so no run reloads for it.
+ */
 export default defineConfig({
+	optimizeDeps: { include: ["marked"] },
+
 	plugins: [
 		cloudflare({
 			viteEnvironment: { name: "ssr" },
